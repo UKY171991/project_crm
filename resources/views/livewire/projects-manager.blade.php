@@ -39,11 +39,11 @@
                                 <small>Created {{ $project->created_at->format('d.m.Y') }}</small>
                             </td>
                             <td>{{ $project->client->company_name ?? 'N/A' }}</td>
-                            <td>${{ number_format($project->budget, 2) }}</td>
-                            <td><span class="text-success">${{ number_format($project->total_paid, 2) }}</span></td>
+                            <td>{{ $project->currency }} {{ number_format($project->budget, 2) }}</td>
+                            <td><span class="text-success">{{ $project->currency }} {{ number_format($project->total_paid, 2) }}</span></td>
                             <td>
                                 <span class="{{ $project->balance > 0 ? 'text-danger' : 'text-primary' }}">
-                                    ${{ number_format($project->balance, 2) }}
+                                    {{ $project->currency }} {{ number_format($project->balance, 2) }}
                                 </span>
                             </td>
                             <td>
@@ -96,14 +96,25 @@
                             <textarea class="form-control" wire:model="description"></textarea>
                         </div>
                         <div class="row">
-                            <div class="col-md-6">
+                            <div class="col-md-3">
                                 <div class="form-group">
-                                    <label>Budget ($)</label>
+                                    <label>Currency</label>
+                                    <select class="form-control" wire:model="currency">
+                                        <option value="USD">USD</option>
+                                        <option value="INR">INR</option>
+                                        <option value="EUR">EUR</option>
+                                        <option value="GBP">GBP</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-5">
+                                <div class="form-group">
+                                    <label>Budget</label>
                                     <input type="number" step="0.01" class="form-control" wire:model="budget">
                                     @error('budget') <span class="text-danger">{{ $message }}</span> @enderror
                                 </div>
                             </div>
-                            <div class="col-md-6">
+                            <div class="col-md-4">
                                 <div class="form-group">
                                     <label>Start Date</label>
                                     <input type="date" class="form-control" wire:model="start_date">

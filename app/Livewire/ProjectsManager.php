@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Auth;
 class ProjectsManager extends Component
 {
     public $projects;
-    public $title, $description, $budget, $start_date, $client_id, $project_id_to_edit, $status;
+    public $title, $description, $budget, $currency = 'USD', $start_date, $client_id, $project_id_to_edit, $status;
     public $isEditMode = false;
     public $showModal = false;
 
@@ -18,6 +18,7 @@ class ProjectsManager extends Component
         'title' => 'required|string|max:255',
         'description' => 'nullable|string',
         'budget' => 'nullable|numeric|min:0',
+        'currency' => 'required|string|max:10',
         'start_date' => 'nullable|date',
     ];
 
@@ -71,6 +72,7 @@ class ProjectsManager extends Component
         $this->title = $project->title;
         $this->description = $project->description;
         $this->budget = $project->budget;
+        $this->currency = $project->currency ?? 'USD';
         $this->start_date = $project->start_date;
         $this->client_id = $project->client_id;
         $this->status = $project->status;
@@ -88,6 +90,7 @@ class ProjectsManager extends Component
             'title' => $this->title,
             'description' => $this->description,
             'budget' => $this->budget ?: 0,
+            'currency' => $this->currency,
             'start_date' => $this->start_date,
         ]);
         $project->created_by = $user->id;
@@ -117,6 +120,7 @@ class ProjectsManager extends Component
             'title' => $this->title,
             'description' => $this->description,
             'budget' => $this->budget ?: 0,
+            'currency' => $this->currency,
             'start_date' => $this->start_date,
             'status' => $this->status ?? $project->status,
         ]);
@@ -156,6 +160,7 @@ class ProjectsManager extends Component
         $this->title = '';
         $this->description = '';
         $this->budget = '';
+        $this->currency = 'USD';
         $this->start_date = '';
         $this->client_id = '';
         $this->status = '';

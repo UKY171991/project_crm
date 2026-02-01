@@ -23,7 +23,7 @@
                             <div class="info-box bg-light">
                                 <div class="info-box-content">
                                     <span class="info-box-text text-center text-muted">Budget</span>
-                                    <span class="info-box-number text-center text-primary mb-0">${{ number_format($project->budget, 2) }}</span>
+                                    <span class="info-box-number text-center text-primary mb-0">{{ $project->currency }} {{ number_format($project->budget, 2) }}</span>
                                 </div>
                             </div>
                         </div>
@@ -31,7 +31,7 @@
                             <div class="info-box bg-light">
                                 <div class="info-box-content">
                                     <span class="info-box-text text-center text-muted">Total Paid</span>
-                                    <span class="info-box-number text-center text-success mb-0">${{ number_format($project->total_paid, 2) }}</span>
+                                    <span class="info-box-number text-center text-success mb-0">{{ $project->currency }} {{ number_format($project->total_paid, 2) }}</span>
                                 </div>
                             </div>
                         </div>
@@ -39,7 +39,7 @@
                             <div class="info-box bg-light">
                                 <div class="info-box-content">
                                     <span class="info-box-text text-center text-muted">Balance</span>
-                                    <span class="info-box-number text-center {{ $project->balance > 0 ? 'text-danger' : 'text-primary' }} mb-0">${{ number_format($project->balance, 2) }}</span>
+                                    <span class="info-box-number text-center {{ $project->balance > 0 ? 'text-danger' : 'text-primary' }} mb-0">{{ $project->currency }} {{ number_format($project->balance, 2) }}</span>
                                 </div>
                             </div>
                         </div>

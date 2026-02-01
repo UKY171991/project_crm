@@ -17,6 +17,7 @@ class Project extends Model
         'title',
         'description',
         'budget',
+        'currency',
         'start_date',
         'end_date',
         'status',
