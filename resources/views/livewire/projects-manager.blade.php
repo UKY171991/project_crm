@@ -22,7 +22,10 @@
                 <thead>
                     <tr>
                         <th style="width: 20%">Project Title</th>
-                        <th style="width: 20%">Client</th>
+                        <th style="width: 15%">Client</th>
+                        <th>Budget</th>
+                        <th>Paid</th>
+                        <th>Balance</th>
                         <th>Status</th>
                         <th style="width: 20%">Actions</th>
                     </tr>
@@ -36,6 +39,13 @@
                                 <small>Created {{ $project->created_at->format('d.m.Y') }}</small>
                             </td>
                             <td>{{ $project->client->company_name ?? 'N/A' }}</td>
+                            <td>${{ number_format($project->budget, 2) }}</td>
+                            <td><span class="text-success">${{ number_format($project->total_paid, 2) }}</span></td>
+                            <td>
+                                <span class="{{ $project->balance > 0 ? 'text-danger' : 'text-primary' }}">
+                                    ${{ number_format($project->balance, 2) }}
+                                </span>
+                            </td>
                             <td>
                                 <span class="badge {{ $project->status == 'Running' ? 'badge-success' : ($project->status == 'Pending' ? 'badge-warning' : 'badge-secondary') }}">
                                     {{ $project->status }}
@@ -45,6 +55,16 @@
                                 <a class="btn btn-primary btn-sm" href="{{ route('projects.show', $project) }}">
                                     <i class="fas fa-folder"></i> View
                                 </a>
+                                @if(auth()->user()->hasRole('master') || auth()->user()->hasRole('admin') || (auth()->user()->hasRole('client') && $project->client_id == auth()->user()->clientProfile->id))
+                                    <button wire:click="edit({{ $project->id }})" class="btn btn-info btn-sm">
+                                        <i class="fas fa-pencil-alt"></i> Edit
+                                    </button>
+                                @endif
+                                @if(auth()->user()->hasRole('master') || auth()->user()->hasRole('admin'))
+                                    <button wire:click="delete({{ $project->id }})" class="btn btn-danger btn-sm" onclick="confirm('Are you sure?') || event.stopImmediatePropagation()">
+                                        <i class="fas fa-trash"></i> Delete
+                                    </button>
+                                @endif
                             </td>
                         </tr>
                     @endforeach
@@ -59,7 +79,7 @@
         <div class="modal-dialog" role="document">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Create New Project</h5>
+                    <h5 class="modal-title">{{ $isEditMode ? 'Edit Project' : 'Create New Project' }}</h5>
                     <button type="button" class="close" wire:click="closeModal">
                         <span aria-hidden="true">&times;</span>
                     </button>
@@ -75,10 +95,33 @@
                             <label>Description</label>
                             <textarea class="form-control" wire:model="description"></textarea>
                         </div>
-                        <div class="form-group">
-                            <label>Start Date</label>
-                            <input type="date" class="form-control" wire:model="start_date">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Budget ($)</label>
+                                    <input type="number" step="0.01" class="form-control" wire:model="budget">
+                                    @error('budget') <span class="text-danger">{{ $message }}</span> @enderror
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Start Date</label>
+                                    <input type="date" class="form-control" wire:model="start_date">
+                                </div>
+                            </div>
                         </div>
+
+                        @if($isEditMode)
+                        <div class="form-group">
+                            <label>Status</label>
+                            <select class="form-control" wire:model="status">
+                                <option value="Pending">Pending</option>
+                                <option value="Running">Running</option>
+                                <option value="Completed">Completed</option>
+                                <option value="Canceled">Canceled</option>
+                            </select>
+                        </div>
+                        @endif
 
                         @if((auth()->user()->hasRole('master') || auth()->user()->hasRole('admin')))
                         <div class="form-group">
@@ -96,7 +139,9 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" wire:click="closeModal">Close</button>
-                    <button type="button" class="btn btn-primary" wire:click="store">Create Project</button>
+                    <button type="button" class="btn btn-primary" wire:click="{{ $isEditMode ? 'update' : 'store' }}">
+                        {{ $isEditMode ? 'Save Changes' : 'Create Project' }}
+                    </button>
                 </div>
             </div>
         </div>

@@ -4,7 +4,11 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta http-equiv="x-ua-compatible" content="ie=edge">
-  <title>{{ config('app.name', 'Laravel') }} | Dashboard</title>
+  <title>{{ $systemSettings['system_title'] ?? config('app.name', 'Laravel') }}</title>
+  
+  @if(!empty($systemSettings['system_favicon']))
+    <link rel="icon" type="image/x-icon" href="{{ asset('storage/' . $systemSettings['system_favicon']) }}">
+  @endif
 
   <!-- Google Font: Source Sans Pro -->
   <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,400i,700&display=fallback">
@@ -49,7 +53,10 @@
   <aside class="main-sidebar sidebar-dark-primary elevation-4">
     <!-- Brand Logo -->
     <a href="{{ route('dashboard') }}" class="brand-link">
-      <span class="brand-text font-weight-light">Project CRM</span>
+      @if(!empty($systemSettings['system_logo']))
+        <img src="{{ asset('storage/' . $systemSettings['system_logo']) }}" alt="Logo" class="brand-image img-circle elevation-3" style="opacity: .8">
+      @endif
+      <span class="brand-text font-weight-light">{{ $systemSettings['system_title'] ?? 'Project CRM' }}</span>
     </a>
 
     <!-- Sidebar -->
@@ -75,8 +82,14 @@
 
           <li class="nav-item">
             <a href="{{ route('projects.index') }}" class="nav-link {{ request()->routeIs('projects.*') ? 'active' : '' }}">
-              <i class="nav-icon fas fa-project-diagram"></i>
+              <i class="nav-icon fas fa-tasks"></i>
               <p>Projects</p>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="{{ route('payments.index') }}" class="nav-link {{ request()->routeIs('payments.*') ? 'active' : '' }}">
+              <i class="nav-icon fas fa-money-bill-wave"></i>
+              <p>Payments</p>
             </a>
           </li>
 
@@ -92,6 +105,12 @@
             <a href="{{ route('users.index') }}" class="nav-link {{ request()->routeIs('users.*') ? 'active' : '' }}">
               <i class="nav-icon fas fa-user-cog"></i>
               <p>Users</p>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="{{ route('settings.index') }}" class="nav-link {{ request()->routeIs('settings.*') ? 'active' : '' }}">
+              <i class="nav-icon fas fa-cogs"></i>
+              <p>Settings</p>
             </a>
           </li>
           @endif

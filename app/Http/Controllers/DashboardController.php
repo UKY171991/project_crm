@@ -19,26 +19,29 @@ class DashboardController extends Controller
             'total_projects' => 0,
             'active_projects' => 0,
             'total_clients' => 0,
-            'pending_payments' => 0,
+            'total_revenue' => 0,
         ];
 
         if ($user->hasRole('master')) {
             $stats['total_projects'] = Project::count();
             $stats['active_projects'] = Project::where('status', 'Running')->count();
             $stats['total_clients'] = Client::count();
-            $stats['pending_payments'] = Payment::where('payment_status', 'Unpaid')->count();
+            $stats['total_revenue'] = Payment::where('payment_status', 'Paid')->sum('amount');
         } elseif ($user->hasRole('admin')) {
             $stats['total_projects'] = Project::where('created_by', $user->id)->count();
             $stats['active_projects'] = Project::where('created_by', $user->id)->where('status', 'Running')->count();
-            $stats['total_clients'] = Client::whereHas('user', function($q) use ($user) {
-                // Assuming Admin manages clients they created or general logic
-                // For now, let's just count all for simplification or specific logic if defined
-            })->count(); // Simplify for demo
+            $stats['total_clients'] = Client::count(); // Simplified
+            $stats['total_revenue'] = Payment::whereHas('project', function($q) use ($user) {
+                $q->where('created_by', $user->id);
+            })->where('payment_status', 'Paid')->sum('amount');
         } elseif ($user->hasRole('client')) {
             $client = $user->clientProfile;
             if ($client) {
                 $stats['total_projects'] = Project::where('client_id', $client->id)->count();
                 $stats['active_projects'] = Project::where('client_id', $client->id)->where('status', 'Running')->count();
+                $stats['total_revenue'] = Payment::whereHas('project', function($q) use ($client) {
+                    $q->where('client_id', $client->id);
+                })->where('payment_status', 'Paid')->sum('amount');
             }
         } else {
             // User

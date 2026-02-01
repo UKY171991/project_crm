@@ -54,14 +54,14 @@
             <!-- small box -->
             <div class="small-box bg-danger">
                 <div class="inner">
-                    <h3>{{ $stats['pending_payments'] }}</h3>
+                    <h3>${{ number_format($stats['total_revenue'] ?? 0, 0) }}</h3>
 
-                    <p>Pending Payments</p>
+                    <p>Total Revenue</p>
                 </div>
                 <div class="icon">
-                    <i class="fas fa-file-invoice-dollar"></i>
+                    <i class="fas fa-hand-holding-usd"></i>
                 </div>
-                <a href="#" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
+                <a href="{{ route('payments.index') }}" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
             </div>
         </div>
         <!-- ./col -->

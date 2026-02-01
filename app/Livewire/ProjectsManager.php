@@ -10,13 +10,14 @@ use Illuminate\Support\Facades\Auth;
 class ProjectsManager extends Component
 {
     public $projects;
-    public $title, $description, $start_date, $client_id, $project_id_to_edit, $status;
+    public $title, $description, $budget, $start_date, $client_id, $project_id_to_edit, $status;
     public $isEditMode = false;
     public $showModal = false;
 
     protected $rules = [
         'title' => 'required|string|max:255',
         'description' => 'nullable|string',
+        'budget' => 'nullable|numeric|min:0',
         'start_date' => 'nullable|date',
     ];
 
@@ -37,7 +38,7 @@ class ProjectsManager extends Component
             });
         }
 
-        $this->projects = $query->with('client', 'mediaFiles')->latest()->get();
+        $this->projects = $query->with('client', 'mediaFiles', 'payments')->latest()->get();
         $clients = [];
         if ($user->hasRole('master') || $user->hasRole('admin')) {
             $clients = Client::with('user')->get();
@@ -57,7 +58,7 @@ class ProjectsManager extends Component
     {
         $project = Project::findOrFail($id);
         
-        // Authorization check (simplified for now, can be robust)
+        // Authorization check
         $user = Auth::user();
         if ($user->hasRole('admin') && $project->created_by != $user->id) {
             abort(403);
@@ -69,6 +70,7 @@ class ProjectsManager extends Component
         $this->project_id_to_edit = $id;
         $this->title = $project->title;
         $this->description = $project->description;
+        $this->budget = $project->budget;
         $this->start_date = $project->start_date;
         $this->client_id = $project->client_id;
         $this->status = $project->status;
@@ -85,10 +87,11 @@ class ProjectsManager extends Component
         $project = new Project([
             'title' => $this->title,
             'description' => $this->description,
+            'budget' => $this->budget ?: 0,
             'start_date' => $this->start_date,
         ]);
         $project->created_by = $user->id;
-        $project->status = 'Pending'; // Default
+        $project->status = 'Pending';
 
         if ($user->hasRole('client')) {
             $project->client_id = $user->clientProfile->id;
@@ -110,12 +113,10 @@ class ProjectsManager extends Component
         
         $project = Project::findOrFail($this->project_id_to_edit);
         
-        // Authorization check (simplified)
-        // ...
-
         $project->update([
             'title' => $this->title,
             'description' => $this->description,
+            'budget' => $this->budget ?: 0,
             'start_date' => $this->start_date,
             'status' => $this->status ?? $project->status,
         ]);
@@ -136,10 +137,9 @@ class ProjectsManager extends Component
     {
         $project = Project::findOrFail($id);
         
-        // Authorization
         $user = Auth::user();
         if ($user->hasRole('client')) {
-            abort(403, 'Clients cannot delete projects.'); // Usually logic
+            abort(403, 'Clients cannot delete projects.');
         }
 
         $project->delete();
@@ -155,6 +155,7 @@ class ProjectsManager extends Component
     {
         $this->title = '';
         $this->description = '';
+        $this->budget = '';
         $this->start_date = '';
         $this->client_id = '';
         $this->status = '';

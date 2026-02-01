@@ -16,11 +16,22 @@ class Project extends Model
         'client_id',
         'title',
         'description',
+        'budget',
         'start_date',
         'end_date',
         'status',
         'created_by',
     ];
+
+    public function getTotalPaidAttribute()
+    {
+        return $this->payments()->where('payment_status', 'Paid')->sum('amount');
+    }
+
+    public function getBalanceAttribute()
+    {
+        return $this->budget - $this->total_paid;
+    }
 
     protected static function boot()
     {

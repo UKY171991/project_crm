@@ -19,6 +19,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        if (!app()->runningInConsole() && \Schema::hasTable('settings')) {
+            $settings = \App\Models\Setting::all()->pluck('value', 'key')->toArray();
+            view()->share('systemSettings', $settings);
+        }
     }
 }

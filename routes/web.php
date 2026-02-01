@@ -24,7 +24,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::middleware(['role:master|admin'])->group(function () {
         Route::resource('clients', \App\Http\Controllers\ClientController::class);
         Route::resource('users', \App\Http\Controllers\UserController::class);
+        Route::get('settings', function() {
+            return view('settings.index');
+        })->name('settings.index');
     });
+
+    Route::get('payments', function() {
+        return view('payments.index');
+    })->name('payments.index');
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
