@@ -5,12 +5,13 @@ namespace App\Livewire;
 use Livewire\Component;
 use App\Models\Project;
 use App\Models\Client;
+use App\Models\Currency;
 use Illuminate\Support\Facades\Auth;
 
 class ProjectsManager extends Component
 {
     public $projects;
-    public $title, $description, $budget, $currency = 'USD', $start_date, $client_id, $project_id_to_edit, $status;
+    public $title, $description, $budget, $currency = 'USD', $start_date, $due_date, $client_id, $project_id_to_edit, $status;
     public $isEditMode = false;
     public $showModal = false;
 
@@ -20,6 +21,7 @@ class ProjectsManager extends Component
         'budget' => 'nullable|numeric|min:0',
         'currency' => 'required|string|max:10',
         'start_date' => 'nullable|date',
+        'due_date' => 'nullable|date',
     ];
 
     public function render()
@@ -45,7 +47,9 @@ class ProjectsManager extends Component
             $clients = Client::with('user')->get();
         }
 
-        return view('livewire.projects-manager', compact('clients'));
+        $activeCurrencies = Currency::where('is_active', true)->get();
+
+        return view('livewire.projects-manager', compact('clients', 'activeCurrencies'));
     }
 
     public function create()
@@ -74,6 +78,7 @@ class ProjectsManager extends Component
         $this->budget = $project->budget;
         $this->currency = $project->currency ?? 'USD';
         $this->start_date = $project->start_date;
+        $this->due_date = $project->end_date;
         $this->client_id = $project->client_id;
         $this->status = $project->status;
         
@@ -92,6 +97,7 @@ class ProjectsManager extends Component
             'budget' => $this->budget ?: 0,
             'currency' => $this->currency,
             'start_date' => $this->start_date,
+            'end_date' => $this->due_date,
         ]);
         $project->created_by = $user->id;
         $project->status = 'Pending';
@@ -122,6 +128,7 @@ class ProjectsManager extends Component
             'budget' => $this->budget ?: 0,
             'currency' => $this->currency,
             'start_date' => $this->start_date,
+            'end_date' => $this->due_date,
             'status' => $this->status ?? $project->status,
         ]);
 
@@ -160,8 +167,11 @@ class ProjectsManager extends Component
         $this->title = '';
         $this->description = '';
         $this->budget = '';
-        $this->currency = 'USD';
+        // Set default currency to first active if available
+        $defaultCurrency = Currency::where('is_active', true)->first();
+        $this->currency = $defaultCurrency ? $defaultCurrency->code : 'USD';
         $this->start_date = '';
+        $this->due_date = '';
         $this->client_id = '';
         $this->status = '';
         $this->project_id_to_edit = null;

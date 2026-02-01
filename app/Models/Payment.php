@@ -13,10 +13,15 @@ class Payment extends Model
         'project_id',
         'amount',
         'currency',
+        'payment_date',
         'payment_method',
         'payment_status',
         'transaction_id',
         'created_by',
+    ];
+
+    protected $casts = [
+        'payment_date' => 'date',
     ];
 
     public function project()

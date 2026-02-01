@@ -26,7 +26,10 @@ class Project extends Model
 
     public function getTotalPaidAttribute()
     {
-        return $this->payments()->where('payment_status', 'Paid')->sum('amount');
+        return $this->payments()
+            ->where('payment_status', 'Paid')
+            ->where('currency', $this->currency ?: 'USD')
+            ->sum('amount');
     }
 
     public function getBalanceAttribute()

@@ -5,18 +5,20 @@ namespace App\Livewire;
 use Livewire\Component;
 use App\Models\Payment;
 use App\Models\Project;
+use App\Models\Currency;
 use Illuminate\Support\Facades\Auth;
 
 class ProjectPaymentManager extends Component
 {
     public $project;
-    public $amount, $currency = 'USD', $payment_method, $payment_status, $transaction_id, $payment_id_to_edit;
+    public $amount, $currency = 'USD', $payment_date, $payment_method, $payment_status, $transaction_id, $payment_id_to_edit;
     public $showModal = false;
     public $isEditMode = false;
 
     protected $rules = [
         'amount' => 'required|numeric|min:0',
         'currency' => 'required|string|max:10',
+        'payment_date' => 'required|date',
         'payment_method' => 'required|string|max:255',
         'payment_status' => 'required|in:Paid,Unpaid,Partial',
         'transaction_id' => 'nullable|string|max:255',
@@ -29,13 +31,15 @@ class ProjectPaymentManager extends Component
 
     public function render()
     {
-        $payments = Payment::where('project_id', $this->project->id)->latest()->get();
-        return view('livewire.project-payment-manager', compact('payments'));
+        $payments = Payment::where('project_id', $this->project->id)->orderBy('payment_date', 'desc')->get();
+        $activeCurrencies = Currency::where('is_active', true)->get();
+        return view('livewire.project-payment-manager', compact('payments', 'activeCurrencies'));
     }
 
     public function create()
     {
         $this->resetInputFields();
+        $this->payment_date = date('Y-m-d');
         $this->isEditMode = false;
         $this->showModal = true;
     }
@@ -46,6 +50,7 @@ class ProjectPaymentManager extends Component
         $this->payment_id_to_edit = $id;
         $this->amount = $payment->amount;
         $this->currency = $payment->currency ?? 'USD';
+        $this->payment_date = $payment->payment_date ? $payment->payment_date->format('Y-m-d') : date('Y-m-d');
         $this->payment_method = $payment->payment_method;
         $this->payment_status = $payment->payment_status;
         $this->transaction_id = $payment->transaction_id;
@@ -62,6 +67,7 @@ class ProjectPaymentManager extends Component
             'project_id' => $this->project->id,
             'amount' => $this->amount,
             'currency' => $this->currency,
+            'payment_date' => $this->payment_date,
             'payment_method' => $this->payment_method,
             'payment_status' => $this->payment_status,
             'transaction_id' => $this->transaction_id,
@@ -80,6 +86,7 @@ class ProjectPaymentManager extends Component
         $payment->update([
             'amount' => $this->amount,
             'currency' => $this->currency,
+            'payment_date' => $this->payment_date,
             'payment_method' => $this->payment_method,
             'payment_status' => $this->payment_status,
             'transaction_id' => $this->transaction_id,
@@ -103,7 +110,9 @@ class ProjectPaymentManager extends Component
     private function resetInputFields()
     {
         $this->amount = '';
-        $this->currency = 'USD';
+        $defaultCurrency = Currency::where('is_active', true)->first();
+        $this->currency = $defaultCurrency ? $defaultCurrency->code : 'USD';
+        $this->payment_date = '';
         $this->payment_method = 'UPI';
         $this->payment_status = 'Paid';
         $this->transaction_id = '';

@@ -5,12 +5,14 @@ namespace App\Livewire;
 use Livewire\Component;
 use App\Models\Payment;
 use App\Models\Project;
+use App\Models\Currency;
 use Illuminate\Support\Facades\Auth;
+use Carbon\Carbon;
 
 class PaymentManager extends Component
 {
     public $payments;
-    public $amount, $currency = 'USD', $payment_method, $payment_status, $transaction_id, $project_id, $payment_id_to_edit;
+    public $amount, $currency = 'USD', $payment_date, $payment_method, $payment_status, $transaction_id, $project_id, $payment_id_to_edit;
     public $isEditMode = false;
     public $showModal = false;
     public $selectedProjectBudget = 0;
@@ -19,6 +21,7 @@ class PaymentManager extends Component
     protected $rules = [
         'amount' => 'required|numeric|min:0',
         'currency' => 'required|string|max:10',
+        'payment_date' => 'required|date',
         'payment_method' => 'required|string|max:255',
         'payment_status' => 'required|in:Paid,Unpaid,Partial',
         'project_id' => 'required|exists:projects,id',
@@ -62,18 +65,21 @@ class PaymentManager extends Component
             });
         }
 
-        $this->payments = $query->latest()->get();
+        $this->payments = $query->orderBy('payment_date', 'desc')->get();
         $projects = [];
         if ($user->hasRole('master') || $user->hasRole('admin')) {
             $projects = Project::latest()->get();
         }
 
-        return view('livewire.payment-manager', compact('projects'));
+        $activeCurrencies = Currency::where('is_active', true)->get();
+
+        return view('livewire.payment-manager', compact('projects', 'activeCurrencies'));
     }
 
     public function create()
     {
         $this->resetInputFields();
+        $this->payment_date = date('Y-m-d');
         $this->isEditMode = false;
         $this->showModal = true;
     }
@@ -84,6 +90,7 @@ class PaymentManager extends Component
         $this->payment_id_to_edit = $id;
         $this->amount = $payment->amount;
         $this->currency = $payment->currency ?? 'USD';
+        $this->payment_date = $payment->payment_date ? $payment->payment_date->format('Y-m-d') : date('Y-m-d');
         $this->payment_method = $payment->payment_method;
         $this->payment_status = $payment->payment_status;
         $this->transaction_id = $payment->transaction_id;
@@ -102,6 +109,7 @@ class PaymentManager extends Component
         Payment::create([
             'amount' => $this->amount,
             'currency' => $this->currency,
+            'payment_date' => $this->payment_date,
             'payment_method' => $this->payment_method,
             'payment_status' => $this->payment_status,
             'transaction_id' => $this->transaction_id,
@@ -121,6 +129,7 @@ class PaymentManager extends Component
         $payment->update([
             'amount' => $this->amount,
             'currency' => $this->currency,
+            'payment_date' => $this->payment_date,
             'payment_method' => $this->payment_method,
             'payment_status' => $this->payment_status,
             'transaction_id' => $this->transaction_id,
@@ -145,7 +154,9 @@ class PaymentManager extends Component
     private function resetInputFields()
     {
         $this->amount = '';
-        $this->currency = 'USD';
+        $defaultCurrency = Currency::where('is_active', true)->first();
+        $this->currency = $defaultCurrency ? $defaultCurrency->code : 'USD';
+        $this->payment_date = '';
         $this->payment_method = '';
         $this->payment_status = 'Unpaid';
         $this->transaction_id = '';

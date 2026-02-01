@@ -23,20 +23,23 @@
             <table class="table table-striped text-nowrap">
                 <thead>
                     <tr>
+                        <th>Date</th>
                         <th>Project</th>
                         <th>Client</th>
                         <th>Amount</th>
                         <th>Method</th>
                         <th>Status</th>
                         <th>Transaction ID</th>
-                        <th>Date</th>
+                        @if(auth()->user()->hasRole('master') || auth()->user()->hasRole('admin'))
                         <th>Actions</th>
+                        @endif
                     </tr>
                 </thead>
                 <tbody>
                     @forelse($payments as $payment)
                         <tr>
-                            <td>{{ $payment->project->title }}</td>
+                            <td>{{ $payment->payment_date ? $payment->payment_date->format('d M Y') : $payment->created_at->format('d M Y') }}</td>
+                            <td><a href="{{ route('projects.show', $payment->project) }}">{{ $payment->project->title }}</a></td>
                             <td>{{ $payment->project->client->company_name ?? 'N/A' }}</td>
                             <td>
                                 <strong>{{ $payment->currency }}</strong> {{ number_format($payment->amount, 2) }}
@@ -47,18 +50,17 @@
                                     {{ $payment->payment_status }}
                                 </span>
                             </td>
-                            <td>{{ $payment->transaction_id ?? '-' }}</td>
-                            <td>{{ $payment->created_at->format('d M Y') }}</td>
+                            <td class="small">{{ $payment->transaction_id ?? '-' }}</td>
+                            @if(auth()->user()->hasRole('master') || auth()->user()->hasRole('admin'))
                             <td>
-                                @if(auth()->user()->hasRole('master') || auth()->user()->hasRole('admin'))
-                                <button wire:click="edit({{ $payment->id }})" class="btn btn-info btn-sm">
+                                <button wire:click="edit({{ $payment->id }})" class="btn btn-info btn-xs">
                                     <i class="fas fa-pencil-alt"></i>
                                 </button>
-                                <button wire:click="delete({{ $payment->id }})" class="btn btn-danger btn-sm" onclick="confirm('Are you sure?') || event.stopImmediatePropagation()">
+                                <button wire:click="delete({{ $payment->id }})" class="btn btn-danger btn-xs" onclick="confirm('Are you sure?') || event.stopImmediatePropagation()">
                                     <i class="fas fa-trash"></i>
                                 </button>
-                                @endif
                             </td>
+                            @endif
                         </tr>
                     @empty
                         <tr>
@@ -83,7 +85,7 @@
                 </div>
                 <div class="modal-body">
                     <form>
-                        <div class="form-group">
+                        <div class="form-group mb-3">
                             <label>Project</label>
                             <select class="form-control" wire:model="project_id">
                                 <option value="">-- Select Project --</option>
@@ -95,9 +97,10 @@
                         </div>
 
                         @if($project_id)
-                        <div class="alert alert-info py-2 small">
-                            <strong>Project Budget:</strong> ${{ number_format($selectedProjectBudget, 2) }} <br>
-                            <strong>Remaining Balance:</strong> ${{ number_format($selectedProjectBalance, 2) }}
+                        <div class="alert alert-info py-2 small mb-3">
+                            @php $proj = $projects->find($project_id); @endphp
+                            <strong>Project Budget:</strong> {{ $proj->currency ?? 'USD' }} {{ number_format($proj->budget, 2) }} <br>
+                            <strong>Remaining Balance:</strong> {{ $proj->currency ?? 'USD' }} {{ number_format($proj->balance, 2) }}
                         </div>
                         @endif
 
@@ -106,10 +109,9 @@
                                 <div class="form-group">
                                     <label>Currency</label>
                                     <select class="form-control" wire:model="currency">
-                                        <option value="USD">USD ($)</option>
-                                        <option value="INR">INR (₹)</option>
-                                        <option value="EUR">EUR (€)</option>
-                                        <option value="GBP">GBP (£)</option>
+                                        @foreach($activeCurrencies as $cur)
+                                            <option value="{{ $cur->code }}">{{ $cur->code }} ({{ $cur->symbol }})</option>
+                                        @endforeach
                                     </select>
                                     @error('currency') <span class="text-danger small">{{ $message }}</span> @enderror
                                 </div>
@@ -119,6 +121,29 @@
                                     <label>Amount</label>
                                     <input type="number" step="0.01" class="form-control" wire:model="amount">
                                     @error('amount') <span class="text-danger small">{{ $message }}</span> @enderror
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Payment Date</label>
+                                    <div wire:ignore>
+                                        <input type="text" class="form-control datepicker" wire:model="payment_date" autocomplete="off">
+                                    </div>
+                                    @error('payment_date') <span class="text-danger small">{{ $message }}</span> @enderror
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Status</label>
+                                    <select class="form-control" wire:model="payment_status">
+                                        <option value="Paid">Paid</option>
+                                        <option value="Partial">Partial</option>
+                                        <option value="Unpaid">Unpaid</option>
+                                    </select>
+                                    @error('payment_status') <span class="text-danger small">{{ $message }}</span> @enderror
                                 </div>
                             </div>
                         </div>
@@ -135,15 +160,7 @@
                             </select>
                             @error('payment_method') <span class="text-danger small">{{ $message }}</span> @enderror
                         </div>
-                        <div class="form-group">
-                            <label>Status</label>
-                            <select class="form-control" wire:model="payment_status">
-                                <option value="Paid">Paid</option>
-                                <option value="Partial">Partial</option>
-                                <option value="Unpaid">Unpaid</option>
-                            </select>
-                            @error('payment_status') <span class="text-danger small">{{ $message }}</span> @enderror
-                        </div>
+                        
                         <div class="form-group">
                             <label>Transaction ID (Optional)</label>
                             <input type="text" class="form-control" wire:model="transaction_id">
@@ -161,4 +178,23 @@
         </div>
     </div>
     @endif
+
+    @push('scripts')
+    <script>
+        document.addEventListener('livewire:load', function () {
+            initDatePickers();
+        });
+
+        Livewire.hook('message.processed', (message, component) => {
+            initDatePickers();
+        });
+
+        function initDatePickers() {
+            flatpickr(".datepicker", {
+                dateFormat: "Y-m-d",
+                allowInput: true,
+            });
+        }
+    </script>
+    @endpush
 </div>
