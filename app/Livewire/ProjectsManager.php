@@ -1,0 +1,92 @@
+<?php
+
+namespace App\Livewire;
+
+use Livewire\Component;
+use App\Models\Project;
+use App\Models\Client;
+use Illuminate\Support\Facades\Auth;
+
+class ProjectsManager extends Component
+{
+    public $projects;
+    public $title, $description, $start_date, $client_id;
+    public $showModal = false;
+
+    protected $rules = [
+        'title' => 'required|string|max:255',
+        'description' => 'nullable|string',
+        'start_date' => 'nullable|date',
+    ];
+
+    public function render()
+    {
+        $user = Auth::user();
+        $query = Project::query();
+
+        if ($user->hasRole('master')) {
+            // See all
+        } elseif ($user->hasRole('admin')) {
+            $query->where('created_by', $user->id);
+        } elseif ($user->hasRole('client')) {
+            $query->where('client_id', $user->clientProfile->id);
+        } else {
+            $query->whereHas('assignees', function ($q) use ($user) {
+                $q->where('user_id', $user->id);
+            });
+        }
+
+        $this->projects = $query->with('client', 'mediaFiles')->latest()->get();
+        $clients = [];
+        if ($user->hasRole('master') || $user->hasRole('admin')) {
+            $clients = Client::with('user')->get();
+        }
+
+        return view('livewire.projects-manager', compact('clients'));
+    }
+
+    public function create()
+    {
+        $this->resetInputFields();
+        $this->showModal = true;
+    }
+
+    public function store()
+    {
+        $user = Auth::user();
+        $this->validate();
+
+        $project = new Project([
+            'title' => $this->title,
+            'description' => $this->description,
+            'start_date' => $this->start_date,
+        ]);
+        $project->created_by = $user->id;
+
+        if ($user->hasRole('client')) {
+            $project->client_id = $user->clientProfile->id;
+        } else {
+             $this->validate(['client_id' => 'required|exists:clients,id']);
+             $project->client_id = $this->client_id;
+        }
+
+        $project->save();
+
+        session()->flash('success', 'Project Created Successfully.');
+        $this->closeModal();
+        $this->resetInputFields();
+    }
+
+    public function closeModal()
+    {
+        $this->showModal = false;
+    }
+
+    private function resetInputFields()
+    {
+        $this->title = '';
+        $this->description = '';
+        $this->start_date = '';
+        $this->client_id = '';
+    }
+}
