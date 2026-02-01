@@ -72,10 +72,9 @@
                         <div class="form-group mb-2">
                             <label class="small text-muted mb-0">Currency</label>
                             <select class="form-control form-control-sm" wire:model="currency">
-                                <option value="USD">USD ($)</option>
-                                <option value="INR">INR (₹)</option>
-                                <option value="EUR">EUR (€)</option>
-                                <option value="GBP">GBP (£)</option>
+                                @foreach($activeCurrencies as $cur)
+                                    <option value="{{ $cur->code }}">{{ $cur->code }} ({{ $cur->symbol }})</option>
+                                @endforeach
                             </select>
                         </div>
                         <div class="form-group mb-2">
