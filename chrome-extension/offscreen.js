@@ -1,30 +1,29 @@
 // Offscreen script
 let activeStream = null;
 let captureInterval = null;
+let isInitializing = false;
 
-console.log('Offscreen document initialized');
+console.log('Offscreen document loaded');
 
-// Signal ready immediately
+// Signal ready
 chrome.runtime.sendMessage({ action: 'offscreenReady' });
 
 chrome.runtime.onMessage.addListener(async (message) => {
     if (message.action === 'initCapture') {
-        const { streamId, userId, attendanceId } = message;
-        console.log('Offscreen: Received initCapture command');
+        if (isInitializing) return;
+        isInitializing = true;
 
-        if (!streamId) {
-            console.error('Offscreen: No streamId received');
-            return;
-        }
+        const { streamId, userId, attendanceId } = message;
+        console.log('Offscreen: Activating Stream ID', streamId);
 
         try {
-            // Stop logic
-            if (activeStream) {
-                activeStream.getTracks().forEach(t => t.stop());
-                activeStream = null;
-            }
+            // Cleanup existing
+            stopEverything();
 
-            // GET MEDIA with exact same constraints as the picker context
+            // Wait brief moment for hardware release
+            await new Promise(r => setTimeout(r, 200));
+
+            // GET MEDIA
             activeStream = await navigator.mediaDevices.getUserMedia({
                 audio: false,
                 video: {
@@ -39,19 +38,22 @@ chrome.runtime.onMessage.addListener(async (message) => {
 
             if (captureInterval) clearInterval(captureInterval);
 
-            // First capture
-            setTimeout(() => takeScreenshot(userId, attendanceId), 1000);
+            // First capture stabilization
+            setTimeout(() => takeScreenshot(userId, attendanceId), 3000);
 
             captureInterval = setInterval(() => {
                 takeScreenshot(userId, attendanceId);
             }, 60000);
 
         } catch (err) {
-            console.error('Offscreen FATAL:', err.name, err.message);
+            console.error('Offscreen Hardware Error:', err.name, err.message);
             chrome.runtime.sendMessage({
                 action: 'captureError',
                 error: `${err.name}: ${err.message}`
             });
+            stopEverything();
+        } finally {
+            isInitializing = false;
         }
     } else if (message.action === 'stopOffscreenCapture') {
         stopEverything();
@@ -59,10 +61,7 @@ chrome.runtime.onMessage.addListener(async (message) => {
 });
 
 async function takeScreenshot(userId, attendanceId) {
-    if (!activeStream || !activeStream.active) {
-        console.log('Offscreen: Stream lost');
-        return;
-    }
+    if (!activeStream || !activeStream.active) return;
 
     try {
         const video = document.createElement('video');
@@ -74,9 +73,11 @@ async function takeScreenshot(userId, attendanceId) {
                 video.play().then(resolve).catch(reject);
             };
             video.onerror = reject;
-            // Timeout safety
-            setTimeout(() => reject(new Error('Video load timeout')), 5000);
+            setTimeout(() => reject(new Error('Buffer Delay')), 10000);
         });
+
+        // Frame rendering stabilization
+        await new Promise(r => setTimeout(r, 1000));
 
         const canvas = document.createElement('canvas');
         canvas.width = video.videoWidth;
@@ -84,26 +85,35 @@ async function takeScreenshot(userId, attendanceId) {
         const ctx = canvas.getContext('2d');
         ctx.drawImage(video, 0, 0);
 
-        const base64image = canvas.toDataURL('image/jpeg', 0.7);
+        const base64image = canvas.toDataURL('image/jpeg', 0.8);
 
-        chrome.runtime.sendMessage({
-            action: 'screenshotCaptured',
-            imageData: base64image,
-            userId,
-            attendanceId
-        });
+        if (base64image.length > 5000) {
+            chrome.runtime.sendMessage({
+                action: 'screenshotCaptured',
+                imageData: base64image,
+                userId,
+                attendanceId
+            });
+        }
 
         video.srcObject = null;
         video.remove();
     } catch (err) {
-        console.error('Offscreen: Frame failed:', err);
+        console.warn('Snapshot skipped:', err.message);
     }
 }
 
 function stopEverything() {
-    if (captureInterval) clearInterval(captureInterval);
+    console.log('Offscreen: Internal Cleanup');
+    if (captureInterval) {
+        clearInterval(captureInterval);
+        captureInterval = null;
+    }
     if (activeStream) {
-        activeStream.getTracks().forEach(track => track.stop());
+        activeStream.getTracks().forEach(track => {
+            track.stop();
+            console.log('Track Stopped');
+        });
         activeStream = null;
     }
 }

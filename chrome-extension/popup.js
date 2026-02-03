@@ -46,21 +46,17 @@ chrome.storage.local.get(['userId', 'attendanceId', 'isCapturing', 'userName', '
         attendanceIdDisplayEl.textContent = result.attendanceId;
     }
     if (result.userName) userNameEl.textContent = result.userName;
-    if (result.screenshotCount) screenshotCountEl.textContent = result.screenshotCount;
+    if (result.screenshotCount !== undefined) screenshotCountEl.textContent = result.screenshotCount;
     if (result.lastCapture) lastCaptureEl.textContent = result.lastCapture;
-
-    // Ensure offscreen document is ready
-    chrome.runtime.sendMessage({ action: 'ensureOffscreen' });
 
     updateUI(result.isCapturing || false, result.userId, result.attendanceId);
 });
 
-// Current Time Clock
+// Clock
 setInterval(() => {
     extCurrentTime.textContent = new Date().toLocaleTimeString();
 }, 1000);
 
-// Local Work Counter
 function startLocalTicker() {
     if (workTimerInterval) clearInterval(workTimerInterval);
     workTimerInterval = setInterval(() => {
@@ -77,7 +73,6 @@ function updateWorkDisplay(totalSecs) {
     extWorkTime.textContent = `${h}h ${m}m ${s}s`;
 }
 
-// Fetch work stats
 async function fetchWorkStats(uId) {
     if (!uId) return;
     try {
@@ -99,42 +94,61 @@ async function fetchWorkStats(uId) {
     } catch (e) { }
 }
 
-// Start button
-startBtn.onclick = () => {
+startBtn.onclick = async () => {
     const uId = userIdInput.value;
-    const aId = attendanceIdInput.value;
-    if (!uId || !aId) return alert('Missing ID');
+    if (!uId) return alert('Please Login');
 
     startBtn.disabled = true;
     startBtn.textContent = '⏱️ Starting...';
 
-    // Must ensure offscreen is ready BEFORE triggered picker
-    chrome.runtime.sendMessage({ action: 'ensureOffscreen' }, () => {
-        chrome.desktopCapture.chooseDesktopMedia(['screen', 'window'], (streamId) => {
-            if (!streamId) {
-                startBtn.disabled = false;
-                startBtn.textContent = '▶️ Start Capturing';
-                return;
-            }
+    try {
+        const res = await fetch(`${CRM_BASE_URL}/api/get-active-attendance`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: uId, auto_start: true })
+        });
+        const data = await res.json();
 
+        if (data.success && data.attendance_id) {
+            const aId = data.attendance_id;
+            attendanceIdInput.value = aId;
+            attendanceIdDisplayEl.textContent = aId;
+            chrome.storage.local.set({ attendanceId: aId });
+
+            // SCREENSHOT DISABLED: Skip chooseDesktopMedia
             chrome.runtime.sendMessage({
                 action: 'startCapture',
                 userId: parseInt(uId),
                 attendanceId: parseInt(aId),
-                streamId: streamId
-            }, (res) => {
-                if (res && res.success) {
+                streamId: null // No stream needed for time-only tracking
+            }, (response) => {
+                if (response && response.success) {
                     updateUI(true, uId, aId);
                     startLocalTicker();
                 }
                 startBtn.disabled = false;
-                startBtn.textContent = '▶️ Start Capturing';
+                startBtn.textContent = '▶️ Start Time Recording';
             });
-        });
+        } else {
+            alert('Server failed to start session.');
+            startBtn.disabled = false;
+            startBtn.textContent = '▶️ Start Time Recording';
+        }
+    } catch (e) {
+        alert('Server connection error.');
+        startBtn.disabled = false;
+        startBtn.textContent = '▶️ Start Time Recording';
+    }
+};
+
+stopBtn.onclick = () => {
+    const uId = userIdInput.value;
+    chrome.runtime.sendMessage({ action: 'stopCapture' }, () => {
+        clearInterval(workTimerInterval);
+        updateUI(false, uId, attendanceIdInput.value);
     });
 };
 
-// Login, Stop, Logout... (rest remains same but consolidated)
 extLoginBtn.onclick = async () => {
     const email = extEmailInput.value;
     const password = extPasswordInput.value;
@@ -152,30 +166,11 @@ extLoginBtn.onclick = async () => {
             userIdInput.value = data.id;
             userNameEl.textContent = data.name;
             userIdDisplayEl.textContent = data.id;
-            await fetchActiveAttendance(data.id);
             await fetchWorkStats(data.id);
-            updateUI(false, data.id, attendanceIdInput.value);
-            chrome.runtime.sendMessage({ action: 'ensureOffscreen' });
+            updateUI(false, data.id, null);
         } else showError('Invalid login.');
     } catch (e) { showError('Network error'); }
     extLoginBtn.disabled = false;
-};
-
-stopBtn.onclick = () => {
-    const uId = userIdInput.value;
-    chrome.runtime.sendMessage({ action: 'stopCapture' }, (res) => {
-        if (res && res.success) {
-            clearInterval(workTimerInterval);
-            if (uId) {
-                fetch(`${CRM_BASE_URL}/api/clock-out`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ user_id: uId })
-                }).catch(e => { });
-            }
-            updateUI(false, uId, attendanceIdInput.value);
-        }
-    });
 };
 
 logoutBtn.onclick = () => {
@@ -183,22 +178,6 @@ logoutBtn.onclick = () => {
     chrome.runtime.sendMessage({ action: 'stopCapture' });
     chrome.storage.local.clear(() => location.reload());
 };
-
-async function fetchActiveAttendance(uId) {
-    try {
-        const res = await fetch(`${CRM_BASE_URL}/api/get-active-attendance`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ user_id: uId, auto_start: true })
-        });
-        const data = await res.json();
-        if (data.clocked_in) {
-            attendanceIdInput.value = data.attendance_id;
-            attendanceIdDisplayEl.textContent = data.attendance_id;
-            chrome.storage.local.set({ attendanceId: data.attendance_id });
-        }
-    } catch (e) { }
-}
 
 function updateUI(isCapturing, userId, attendanceId) {
     if (!userId) {
@@ -208,27 +187,26 @@ function updateUI(isCapturing, userId, attendanceId) {
         statsSection.style.display = 'none';
         statusDiv.style.display = 'none';
         liveTimeCard.style.display = 'none';
-        stopBtn.style.display = 'none';
     } else {
         extLoginForm.style.display = 'none';
         inputFormDiv.style.display = isCapturing ? 'none' : 'block';
         userInfoDiv.style.display = 'block';
         statusDiv.style.display = 'block';
-        liveTimeCard.style.display = 'block';
         statsSection.style.display = 'block';
+        liveTimeCard.style.display = 'block';
+
         if (isCapturing) {
             statusDiv.className = 'status active';
-            statusDiv.innerHTML = '<span class="status-icon">✅</span><span>Capturing Active</span>';
+            statusDiv.innerHTML = '<span class="status-icon">✅</span><span>Recording Time</span>';
             stopBtn.style.display = 'block';
             captureStatusEl.textContent = 'Active';
         } else {
             statusDiv.className = 'status inactive';
-            statusDiv.innerHTML = '<span class="status-icon">⏸️</span><span>Not Capturing</span>';
+            statusDiv.innerHTML = '<span class="status-icon">⏸️</span><span>Idle</span>';
             stopBtn.style.display = 'none';
             captureStatusEl.textContent = 'Idle';
+            startBtn.textContent = '▶️ Start Time Recording';
         }
-        if (userId) userIdDisplayEl.textContent = userId;
-        if (attendanceId) attendanceIdDisplayEl.textContent = attendanceId;
     }
 }
 
@@ -240,8 +218,8 @@ function showError(msg) {
 setInterval(() => {
     chrome.storage.local.get(['screenshotCount', 'lastCapture', 'isCapturing', 'userId'], (res) => {
         if (res.userId) {
-            if (res.screenshotCount) screenshotCountEl.textContent = res.screenshotCount;
+            if (res.screenshotCount !== undefined) screenshotCountEl.textContent = res.screenshotCount;
             if (res.lastCapture) lastCaptureEl.textContent = res.lastCapture;
         }
     });
-}, 5000);
+}, 3000);

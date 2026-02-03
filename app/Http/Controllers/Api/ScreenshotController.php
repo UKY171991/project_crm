@@ -57,6 +57,16 @@ class ScreenshotController extends Controller
                 'captured_at' => Carbon::now()
             ]);
 
+            // UPDATE ATTENDANCE SYNC
+            $attendance = Attendance::find($request->attendance_id);
+            if ($attendance && !$attendance->clock_out) {
+                $totalSecs = Carbon::parse($attendance->clock_in)->diffInSeconds(Carbon::now());
+                $attendance->update([
+                    'total_seconds' => $totalSecs,
+                    'updated_at' => Carbon::now()
+                ]);
+            }
+
             return response()->json([
                 'success' => true,
                 'message' => 'Screenshot uploaded successfully',
@@ -68,10 +78,38 @@ class ScreenshotController extends Controller
             
             return response()->json([
                 'success' => false,
-                'message' => 'Screenshot upload failed',
-                'error' => $e->getMessage()
+                'message' => 'Upload failed: ' . $e->getMessage()
             ], 500)->header('Access-Control-Allow-Origin', '*');
         }
+    }
+
+    public function heartbeat(Request $request)
+    {
+        $request->validate([
+            'user_id' => 'required|exists:users,id',
+            'attendance_id' => 'required|exists:attendances,id',
+        ]);
+
+        $attendance = Attendance::where('id', $request->attendance_id)
+            ->where('user_id', $request->user_id)
+            ->whereNull('clock_out')
+            ->first();
+
+        if ($attendance) {
+            $totalSecs = Carbon::parse($attendance->clock_in)->diffInSeconds(Carbon::now());
+            $attendance->update([
+                'total_seconds' => $totalSecs,
+                'updated_at' => Carbon::now()
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'net_seconds' => $totalSecs
+            ])->header('Access-Control-Allow-Origin', '*');
+        }
+
+        return response()->json(['success' => false, 'message' => 'No active attendance found'], 404)
+            ->header('Access-Control-Allow-Origin', '*');
     }
 
     public function getActiveAttendance(Request $request)
@@ -142,7 +180,7 @@ class ScreenshotController extends Controller
 
         return response()->json([
             'success' => false,
-            'message' => 'Invalid credentials'
+            'message' => 'Invalid email or password'
         ], 401)->header('Access-Control-Allow-Origin', '*');
     }
 
@@ -161,38 +199,41 @@ class ScreenshotController extends Controller
 
         $today = Carbon::today();
         
-        // 1. Find ALL active sessions for today
-        $activeSessions = Attendance::where('user_id', $request->user_id)
-            ->whereNull('clock_out')
-            ->get();
-
-        foreach ($activeSessions as $session) {
-            $liveTotal = Carbon::parse($session->clock_in)->diffInSeconds(Carbon::now());
-            // Update each active session with live time
-            $session->update(['total_seconds' => $liveTotal]);
-        }
-
-        // 2. Now calculate totals after syncing
+        // Find ALL sessions for today to sum up total work
         $totalSeconds = Attendance::where('user_id', $request->user_id)
             ->where('date', $today)
             ->sum('total_seconds');
 
+        // Check for active one to add live time
+        $active = Attendance::where('user_id', $request->user_id)
+            ->whereNull('clock_out')
+            ->first();
+            
         $idleSeconds = Attendance::where('user_id', $request->user_id)
             ->where('date', $today)
             ->sum('idle_seconds');
 
+        if ($active) {
+            $liveTime = Carbon::parse($active->clock_in)->diffInSeconds(Carbon::now());
+            // We sum the previous ones + the current live one
+            $otherSeconds = Attendance::where('user_id', $request->user_id)
+                ->where('date', $today)
+                ->where('id', '!=', $active->id)
+                ->sum('total_seconds');
+            
+            $totalSeconds = $otherSeconds + $liveTime;
+        }
+
         $netSeconds = max(0, $totalSeconds - $idleSeconds);
         $hours = floor($netSeconds / 3600);
-        $mins = floor(($netSeconds % 3600) / 60);
-        $secs = $netSeconds % 60;
-        
-        $workDisplay = sprintf('%dh %dm %ds', $hours, $mins, $secs);
+        $minutes = floor(($netSeconds % 3600) / 60);
+        $seconds = $netSeconds % 60;
 
         return response()->json([
             'success' => true,
+            'total_seconds' => $totalSeconds,
             'net_seconds' => $netSeconds,
-            'work_display' => $workDisplay,
-            'idle_display' => floor($idleSeconds / 60) . 'm'
+            'work_display' => "{$hours}h {$minutes}m {$seconds}s"
         ])->header('Access-Control-Allow-Origin', '*');
     }
 
@@ -215,8 +256,11 @@ class ScreenshotController extends Controller
             ->first();
 
         if ($attendance) {
+            $now = Carbon::now();
+            $totalSecs = Carbon::parse($attendance->clock_in)->diffInSeconds($now);
             $attendance->update([
-                'clock_out' => Carbon::now()
+                'clock_out' => $now,
+                'total_seconds' => $totalSecs
             ]);
 
             return response()->json([
