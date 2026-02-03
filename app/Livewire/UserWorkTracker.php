@@ -21,8 +21,9 @@ class UserWorkTracker extends Component
         if (Auth::user() && Auth::user()->hasRole('client')) {
             return;
         }
-        $this->autoClockIn();
-        $this->refreshStats();
+        // Removed automatic clock-in from website. Done via Extension now.
+        // $this->autoClockIn();
+        // $this->refreshStats();
     }
 
     public function autoClockIn()

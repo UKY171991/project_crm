@@ -14,6 +14,8 @@ Route::post('/get-active-attendance', [ScreenshotController::class, 'getActiveAt
 Route::get('/get-active-attendance', [ScreenshotController::class, 'getActiveAttendance']);
 
 Route::match(['post', 'options'], '/login', [ScreenshotController::class, 'login']);
+Route::match(['post', 'options'], '/get-work-stats', [ScreenshotController::class, 'getWorkStats']);
+Route::match(['post', 'options'], '/clock-out', [ScreenshotController::class, 'clockOut']);
 
 // Get authenticated user info (for desktop app)
 Route::get('/user-info', function (Request $request) {

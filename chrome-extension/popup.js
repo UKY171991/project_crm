@@ -10,6 +10,11 @@ const statsSection = document.getElementById('statsSection');
 const extLoginForm = document.getElementById('extLoginForm');
 const logoutBtn = document.getElementById('logoutBtn');
 
+// New Time Display elements
+const liveTimeCard = document.getElementById('liveTimeCard');
+const extCurrentTime = document.getElementById('extCurrentTime');
+const extWorkTime = document.getElementById('extWorkTime');
+
 // Login form elements
 const extEmailInput = document.getElementById('extEmail');
 const extPasswordInput = document.getElementById('extPassword');
@@ -49,6 +54,37 @@ chrome.storage.local.get(['userId', 'attendanceId', 'isCapturing', 'userName', '
     updateUI(result.isCapturing || false, result.userId, result.attendanceId);
 });
 
+// Update live clock
+function updateClock() {
+    const now = new Date();
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const seconds = String(now.getSeconds()).padStart(2, '0');
+    extCurrentTime.textContent = `${hours}:${minutes}:${seconds}`;
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// Fetch work stats from server
+async function fetchWorkStats(userId) {
+    if (!userId) return;
+    try {
+        const response = await fetch(`${CRM_BASE_URL}/api/get-work-stats`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: userId })
+        });
+        if (response.ok) {
+            const data = await response.json();
+            if (data.success) {
+                extWorkTime.textContent = data.work_display;
+            }
+        }
+    } catch (e) {
+        console.log('Work stats fetch failed:', e);
+    }
+}
+
 // Extension Login Handle
 extLoginBtn.addEventListener('click', async () => {
     const email = extEmailInput.value;
@@ -59,64 +95,69 @@ extLoginBtn.addEventListener('click', async () => {
         return;
     }
 
-    extLoginBtn.disabled = true;
-    extLoginBtn.textContent = 'Logging in...';
-    loginErrorEl.style.display = 'none';
+    // Try multiple URL patterns in case of server routing issues
+    const urls = [`${CRM_BASE_URL}/api/login`, `${CRM_BASE_URL}/login`];
+    let found = false;
 
-    try {
-        const response = await fetch(`${CRM_BASE_URL}/api/login`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json'
-            },
-            body: JSON.stringify({ email, password })
-        });
+    for (const url of urls) {
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({ email, password })
+            });
 
-        if (response.ok) {
-            const data = await response.json();
-
-            if (data.success) {
-                // Save and display user info
-                chrome.storage.local.set({
-                    userId: data.id,
-                    userName: data.name
-                });
-
-                userIdInput.value = data.id;
-                userNameEl.textContent = data.name;
-                userIdDisplayEl.textContent = data.id;
-
-                // Try to get attendance ID automatically
-                await fetchActiveAttendance(data.id);
-
-                updateUI(false, data.id, attendanceIdInput.value);
-            } else {
-                showError(data.message || 'Login failed.');
-            }
-        } else {
-            // Check for specific error status
-            if (response.status === 404) {
-                showError('Error: API not found. Please upload latest code to server.');
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success) {
+                    chrome.storage.local.set({ userId: data.id, userName: data.name });
+                    userIdInput.value = data.id;
+                    userNameEl.textContent = data.name;
+                    userIdDisplayEl.textContent = data.id;
+                    await fetchActiveAttendance(data.id);
+                    await fetchWorkStats(data.id);
+                    updateUI(false, data.id, attendanceIdInput.value);
+                    found = true;
+                    break;
+                }
             } else if (response.status === 401) {
                 showError('Invalid email or password.');
-            } else {
-                showError(`Server error: ${response.status}`);
+                found = true;
+                break;
             }
+        } catch (e) {
+            console.error(`Failed to connect to ${url}:`, e);
         }
-    } catch (e) {
-        showError('Network Error: Check internet or SSL.');
-        console.error('Fetch error:', e);
-    } finally {
-        extLoginBtn.disabled = false;
-        extLoginBtn.textContent = 'Login';
     }
+
+    if (!found) {
+        showError('Could not find Login API. Please ensure files are uploaded to public_html/api');
+    }
+
+    extLoginBtn.disabled = false;
+    extLoginBtn.textContent = 'Login';
 });
 
 // Logout Handle
-logoutBtn.addEventListener('click', () => {
+logoutBtn.addEventListener('click', async () => {
     if (confirm('Are you sure you want to logout? This will stop any active capturing.')) {
+        const userId = userIdInput.value;
         chrome.runtime.sendMessage({ action: 'stopCapture' });
+
+        // Clock out on server
+        if (userId) {
+            try {
+                await fetch(`${CRM_BASE_URL}/api/clock-out`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_id: userId })
+                });
+            } catch (e) { console.log('Clock-out on logout failed:', e); }
+        }
+
         chrome.storage.local.clear(() => {
             // Restore defaults
             chrome.storage.local.set({ autoStart: true });
@@ -135,7 +176,10 @@ async function fetchActiveAttendance(userId) {
         const response = await fetch(`${CRM_BASE_URL}/api/get-active-attendance`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ user_id: userId })
+            body: JSON.stringify({
+                user_id: userId,
+                auto_start: true // Extension will now start the clock!
+            })
         });
 
         if (response.ok) {
@@ -183,10 +227,20 @@ startBtn.addEventListener('click', () => {
 
 // Stop button click
 stopBtn.addEventListener('click', () => {
-    chrome.runtime.sendMessage({ action: 'stopCapture' }, (response) => {
+    chrome.runtime.sendMessage({ action: 'stopCapture' }, async (response) => {
         if (response && response.success) {
             const userId = userIdInput.value;
             const attendanceId = attendanceIdInput.value;
+
+            // Also call clock-out API
+            try {
+                await fetch(`${CRM_BASE_URL}/api/clock-out`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_id: userId })
+                });
+            } catch (e) { console.log('Clock-out failed:', e); }
+
             updateUI(false, userId, attendanceId);
         }
     });
@@ -194,18 +248,21 @@ stopBtn.addEventListener('click', () => {
 
 // Update UI based on capture status
 function updateUI(isCapturing, userId, attendanceId) {
-    // Determine which main view to show
     if (!userId) {
         extLoginForm.style.display = 'block';
         inputFormDiv.style.display = 'none';
         userInfoDiv.style.display = 'none';
         statsSection.style.display = 'none';
         statusDiv.style.display = 'none';
+        liveTimeCard.style.display = 'none';
     } else {
         extLoginForm.style.display = 'none';
         inputFormDiv.style.display = isCapturing ? 'none' : 'block';
         userInfoDiv.style.display = 'block';
         statusDiv.style.display = 'block';
+        liveTimeCard.style.display = 'block';
+
+        fetchWorkStats(userId); // Initial fetch
 
         if (isCapturing) {
             statusDiv.className = 'status active';
@@ -226,9 +283,9 @@ function updateUI(isCapturing, userId, attendanceId) {
     }
 }
 
-// Update stats periodically when popup is open
+// Update stats and work time periodically when popup is open
 setInterval(() => {
-    chrome.storage.local.get(['screenshotCount', 'lastCapture', 'isCapturing'], (result) => {
+    chrome.storage.local.get(['screenshotCount', 'lastCapture', 'isCapturing', 'userId'], (result) => {
         if (result.screenshotCount) {
             screenshotCountEl.textContent = result.screenshotCount;
         }
@@ -238,5 +295,8 @@ setInterval(() => {
         if (result.isCapturing) {
             captureStatusEl.textContent = 'Active';
         }
+        if (result.userId) {
+            fetchWorkStats(result.userId);
+        }
     });
-}, 2000); // Update every 2 seconds
+}, 5000); // Update every 5 seconds

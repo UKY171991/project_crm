@@ -92,6 +92,15 @@ class ScreenshotController extends Controller
             ->latest()
             ->first();
 
+        // If no active session and auto_start is requested, create one
+        if (!$attendance && $request->auto_start) {
+            $attendance = Attendance::create([
+                'user_id' => $request->user_id,
+                'date' => Carbon::today(),
+                'clock_in' => Carbon::now(),
+            ]);
+        }
+
         if ($attendance) {
             return response()->json([
                 'success' => true,
@@ -135,5 +144,94 @@ class ScreenshotController extends Controller
             'success' => false,
             'message' => 'Invalid credentials'
         ], 401)->header('Access-Control-Allow-Origin', '*');
+    }
+
+    public function getWorkStats(Request $request)
+    {
+        if ($request->isMethod('options')) {
+            return response('', 200)
+                ->header('Access-Control-Allow-Origin', '*')
+                ->header('Access-Control-Allow-Methods', 'POST, GET, OPTIONS')
+                ->header('Access-Control-Allow-Headers', 'Content-Type, Accept, Authorization, X-Requested-With');
+        }
+
+        $request->validate([
+            'user_id' => 'required|exists:users,id'
+        ]);
+
+        $today = Carbon::today();
+        
+        $totalSeconds = Attendance::where('user_id', $request->user_id)
+            ->where('date', $today)
+            ->sum('total_seconds');
+
+        $idleSeconds = Attendance::where('user_id', $request->user_id)
+            ->where('date', $today)
+            ->sum('idle_seconds');
+
+        $activeSession = Attendance::where('user_id', $request->user_id)
+            ->whereNull('clock_out')
+            ->latest()
+            ->first();
+
+        if ($activeSession) {
+            $liveTotal = Carbon::parse($activeSession->clock_in)->diffInSeconds(Carbon::now());
+            // Sync current session total
+            $activeSession->update(['total_seconds' => $liveTotal]);
+            
+            // Re-sum after update
+            $totalSeconds = Attendance::where('user_id', $request->user_id)
+                ->where('date', $today)
+                ->sum('total_seconds');
+        }
+
+        $netSeconds = max(0, $totalSeconds - $idleSeconds);
+        $hours = floor($netSeconds / 3600);
+        $mins = floor(($netSeconds % 3600) / 60);
+        $secs = $netSeconds % 60;
+        
+        $workDisplay = sprintf('%dh %dm %ds', $hours, $mins, $secs);
+
+        return response()->json([
+            'success' => true,
+            'net_seconds' => $netSeconds,
+            'work_display' => $workDisplay,
+            'idle_display' => floor($idleSeconds / 60) . 'm'
+        ])->header('Access-Control-Allow-Origin', '*');
+    }
+
+    public function clockOut(Request $request)
+    {
+        if ($request->isMethod('options')) {
+            return response('', 200)
+                ->header('Access-Control-Allow-Origin', '*')
+                ->header('Access-Control-Allow-Methods', 'POST, GET, OPTIONS')
+                ->header('Access-Control-Allow-Headers', 'Content-Type, Accept, Authorization, X-Requested-With');
+        }
+
+        $request->validate([
+            'user_id' => 'required|exists:users,id'
+        ]);
+
+        $attendance = Attendance::where('user_id', $request->user_id)
+            ->whereNull('clock_out')
+            ->latest()
+            ->first();
+
+        if ($attendance) {
+            $attendance->update([
+                'clock_out' => Carbon::now()
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Clocked out successfully'
+            ])->header('Access-Control-Allow-Origin', '*');
+        }
+
+        return response()->json([
+            'success' => false,
+            'message' => 'No active session found'
+        ])->header('Access-Control-Allow-Origin', '*');
     }
 }

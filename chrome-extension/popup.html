@@ -238,6 +238,23 @@
             <span>Not Capturing</span>
         </div>
 
+        <!-- Live Time Display -->
+        <div id="liveTimeCard" class="status-card"
+            style="display: none; background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); color: white; border: none; margin-bottom: 12px; padding: 12px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div style="text-align: left;">
+                    <div style="font-size: 10px; color: #94a3b8; text-transform: uppercase; font-weight: bold;">Current
+                        Time</div>
+                    <div id="extCurrentTime" style="font-size: 16px; font-weight: 700;">--:--:--</div>
+                </div>
+                <div style="text-align: right;">
+                    <div style="font-size: 10px; color: #10b981; text-transform: uppercase; font-weight: bold;">Work
+                        Time (Net)</div>
+                    <div id="extWorkTime" style="font-size: 16px; font-weight: 700; color: #10b981;">0h 0m 0s</div>
+                </div>
+            </div>
+        </div>
+
         <!-- User Information -->
         <div id="userInfo" class="user-info" style="display: none;">
             <h3>👤 User Information</h3>

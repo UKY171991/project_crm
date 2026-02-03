@@ -87,6 +87,10 @@ function startScreenCapture() {
     autoStart: true
   });
 
+  // Show "REC" badge on extension icon
+  chrome.action.setBadgeText({ text: 'ON' });
+  chrome.action.setBadgeBackgroundColor({ color: '#F44336' }); // Red color
+
   // Capture immediately
   captureScreen();
 
@@ -105,6 +109,9 @@ function stopScreenCapture() {
   }
 
   chrome.storage.local.set({ isCapturing: false });
+
+  // Clear badge
+  chrome.action.setBadgeText({ text: '' });
 }
 
 // Capture screen function
@@ -260,6 +267,8 @@ chrome.runtime.onStartup.addListener(async () => {
 
     if (settings.isCapturing) {
       startScreenCapture();
+    } else {
+      chrome.action.setBadgeText({ text: '' });
     }
   }
 });
