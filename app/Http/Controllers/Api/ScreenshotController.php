@@ -161,6 +161,18 @@ class ScreenshotController extends Controller
 
         $today = Carbon::today();
         
+        // 1. Find ALL active sessions for today
+        $activeSessions = Attendance::where('user_id', $request->user_id)
+            ->whereNull('clock_out')
+            ->get();
+
+        foreach ($activeSessions as $session) {
+            $liveTotal = Carbon::parse($session->clock_in)->diffInSeconds(Carbon::now());
+            // Update each active session with live time
+            $session->update(['total_seconds' => $liveTotal]);
+        }
+
+        // 2. Now calculate totals after syncing
         $totalSeconds = Attendance::where('user_id', $request->user_id)
             ->where('date', $today)
             ->sum('total_seconds');
@@ -168,22 +180,6 @@ class ScreenshotController extends Controller
         $idleSeconds = Attendance::where('user_id', $request->user_id)
             ->where('date', $today)
             ->sum('idle_seconds');
-
-        $activeSession = Attendance::where('user_id', $request->user_id)
-            ->whereNull('clock_out')
-            ->latest()
-            ->first();
-
-        if ($activeSession) {
-            $liveTotal = Carbon::parse($activeSession->clock_in)->diffInSeconds(Carbon::now());
-            // Sync current session total
-            $activeSession->update(['total_seconds' => $liveTotal]);
-            
-            // Re-sum after update
-            $totalSeconds = Attendance::where('user_id', $request->user_id)
-                ->where('date', $today)
-                ->sum('total_seconds');
-        }
 
         $netSeconds = max(0, $totalSeconds - $idleSeconds);
         $hours = floor($netSeconds / 3600);
