@@ -14,12 +14,34 @@
         <div class="row">
         <!-- DETAIL COLUMN -->
         <div class="col-md-8">
+            <div class="card card-primary card-outline shadow-sm mb-4">
+                <div class="card-header border-0">
+                    <h3 class="card-title font-weight-bold" style="font-size: 1.5rem;">
+                        <i class="fas fa-folder-open mr-2 text-primary"></i>
+                        {{ $project->title }}
+                    </h3>
+                </div>
+                <div class="card-body pt-0">
+                    @if($project->urls && count($project->urls) > 0)
+                    <div class="d-flex flex-wrap">
+                        @foreach($project->urls as $url)
+                        <a href="{{ $url['url'] }}" target="_blank" class="btn btn-sm btn-outline-primary mr-2 mb-2 shadow-sm">
+                            <i class="fas fa-external-link-alt mr-1"></i>
+                            {{ !empty($url['label']) ? $url['label'] : 'Visit Link' }}
+                        </a>
+                        @endforeach
+                    </div>
+                    @endif
+                </div>
+            </div>
+
             <div class="card card-primary">
                 <div class="card-header">
                     <h3 class="card-title">Project Detail</h3>
                 </div>
                 <div class="card-body">
                     <div class="row text-uppercase">
+                        @if(!auth()->user()->hasRole('user'))
                         <div class="col-12 col-sm-4">
                             <div class="info-box bg-light shadow-sm">
                                 <div class="info-box-content">
@@ -44,15 +66,42 @@
                                 </div>
                             </div>
                         </div>
+                        @endif
                     </div>
                     <div class="row mt-2">
                         <div class="col-12 col-sm-4">
                             <div class="info-box bg-light shadow-sm">
                                 <div class="info-box-content text-center">
-                                    <span class="info-box-text text-muted">Status</span>
-                                    <span class="badge {{ $project->status == 'Running' ? 'badge-success' : ($project->status == 'Pending' ? 'badge-warning' : 'badge-secondary') }}">
-                                        {{ $project->status }}
-                                    </span>
+                                    <span class="info-box-text text-muted mb-2">Status</span>
+                                    
+                                    @if($pendingStatusChange)
+                                        <div class="alert alert-warning p-1 small mb-0">
+                                            Request Pending: <strong>{{ $pendingStatusChange->new_status }}</strong>
+                                            <br>
+                                            <small>by {{ $pendingStatusChange->user->name }}</small>
+                                            
+                                            @if(auth()->user()->hasRole('master') || auth()->user()->hasRole('admin'))
+                                            <div class="mt-2">
+                                                <button wire:click="approveStatusChange({{ $pendingStatusChange->id }})" class="btn btn-xs btn-success"><i class="fas fa-check"></i></button>
+                                                <button wire:click="rejectStatusChange({{ $pendingStatusChange->id }})" class="btn btn-xs btn-danger"><i class="fas fa-times"></i></button>
+                                            </div>
+                                            @endif
+                                        </div>
+                                    @else
+                                        <div class="input-group input-group-sm">
+                                            <select class="form-control" wire:model="requested_status">
+                                                <option value="Pending">Pending</option>
+                                                <option value="Running">Running</option>
+                                                <option value="Completed">Completed</option>
+                                                <option value="Canceled">Canceled</option>
+                                            </select>
+                                            <div class="input-group-append">
+                                                <button class="btn btn-primary" wire:click="requestStatusChange">
+                                                    {{ (auth()->user()->hasRole('master') || auth()->user()->hasRole('admin')) ? 'Update' : 'Request' }}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    @endif
                                 </div>
                             </div>
                         </div>
@@ -80,9 +129,72 @@
                     <div class="row mt-4">
                         <div class="col-12">
                             <h5 class="text-muted border-bottom pb-2">Description</h5>
-                            <div class="p-2">
+                            <div class="p-2 mb-3">
                                 <p class="text-muted">{{ $project->description ?: 'No description provided.' }}</p>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Remarks Section -->
+            <div class="card card-outline card-info">
+                <div class="card-header border-0 pb-0">
+                    <h3 class="card-title font-weight-bold"><i class="fas fa-comments mr-1 text-info"></i> Project Remarks</h3>
+                </div>
+                <div class="card-body">
+                    @if(session()->has('remark_success'))
+                        <div class="alert alert-success py-1 small mb-3">
+                            {{ session('remark_success') }}
+                        </div>
+                    @endif
+
+                    <!-- Remark Form -->
+                    <div class="mb-4">
+                        <form wire:submit.prevent="addRemark">
+                            <div class="input-group">
+                                <input type="text" class="form-control" placeholder="Add a remark..." wire:model="new_remark">
+                                <div class="input-group-append">
+                                    <button class="btn btn-info" type="submit">
+                                        <i class="fas fa-paper-plane"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            @error('new_remark') <span class="text-danger small">{{ $message }}</span> @enderror
+                        </form>
+                    </div>
+
+                    <!-- Remarks List -->
+                    <div class="timeline timeline-inverse">
+                        @forelse($project->projectRemarks as $remark)
+                            <div>
+                                <i class="fas fa-comment bg-info"></i>
+                                <div class="timeline-item shadow-sm border">
+                                    <span class="time small text-muted"><i class="far fa-clock"></i> {{ $remark->created_at->diffForHumans() }}</span>
+                                    <h3 class="timeline-header no-border small">
+                                        <span class="text-primary font-weight-bold">{{ $remark->user->name }}</span> 
+                                        added a remark
+                                        @if(auth()->user()->hasRole('master') || auth()->id() == $remark->user_id)
+                                            <button wire:click="deleteRemark({{ $remark->id }})" 
+                                                    class="btn btn-xs btn-link text-danger p-0 ml-2"
+                                                    onclick="confirm('Delete this remark?') || event.stopImmediatePropagation()">
+                                                <i class="fas fa-trash-alt"></i>
+                                            </button>
+                                        @endif
+                                    </h3>
+                                    <div class="timeline-body py-2">
+                                        {{ $remark->remark }}
+                                    </div>
+                                </div>
+                            </div>
+                        @empty
+                            <div class="text-center text-muted py-3">
+                                <i class="far fa-comment-dots fa-2x mb-2 d-block"></i>
+                                <p class="mb-0">No remarks yet.</p>
+                            </div>
+                        @endforelse
+                        <div>
+                            <i class="far fa-clock bg-gray"></i>
                         </div>
                     </div>
                 </div>
@@ -219,7 +331,9 @@
             @endif
 
             <!-- Payments Section -->
+            @if(!auth()->user()->hasRole('user'))
             @livewire('project-payment-manager', ['project' => $project])
+            @endif
 
             <!-- Assign Users -->
             @if(auth()->user()->hasRole('master') || auth()->user()->hasRole('admin'))

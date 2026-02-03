@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Screenshot Test</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+</head>
+<body>
+    <h1>Screenshot Test Page</h1>
+    <button onclick="testScreenshot()">Take Test Screenshot</button>
+    <div id="result"></div>
+    
+    <script>
+        function testScreenshot() {
+            console.log('Testing screenshot...');
+            html2canvas(document.body, {
+                width: window.innerWidth,
+                height: window.innerHeight,
+                x: window.scrollX,
+                y: window.scrollY,
+                scrollX: 0,
+                scrollY: 0,
+                windowWidth: window.innerWidth,
+                windowHeight: window.innerHeight,
+                useCORS: true,
+                allowTaint: false,
+                logging: true
+            }).then(canvas => {
+                let base64image = canvas.toDataURL("image/png");
+                console.log('Screenshot captured!', 'Size:', (base64image.length / 1024).toFixed(2), 'KB');
+                document.getElementById('result').innerHTML = '<p>Screenshot captured! Size: ' + (base64image.length / 1024).toFixed(2) + ' KB</p><img src="' + base64image + '" style="max-width: 300px; border: 1px solid #ccc;">';
+            }).catch(err => {
+                console.error('Screenshot failed:', err);
+                document.getElementById('result').innerHTML = '<p style="color: red;">Error: ' + err.message + '</p>';
+            });
+        }
+    </script>
+</body>
+</html>

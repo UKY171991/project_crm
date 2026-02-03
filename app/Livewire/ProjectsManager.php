@@ -6,18 +6,21 @@ use Livewire\Component;
 use App\Models\Project;
 use App\Models\Client;
 use App\Models\Currency;
+use App\Models\ProjectRemark;
 use Illuminate\Support\Facades\Auth;
 
 class ProjectsManager extends Component
 {
     public $projects;
-    public $title, $description, $budget, $currency = 'USD', $start_date, $due_date, $client_id, $project_id_to_edit, $status;
+    public $title, $description, $remarks, $budget, $currency = 'USD', $start_date, $due_date, $client_id, $project_id_to_edit, $status;
+    public $project_urls = [];
     public $isEditMode = false;
     public $showModal = false;
 
     protected $rules = [
         'title' => 'required|string|max:255',
         'description' => 'nullable|string',
+        'remarks' => 'nullable|string',
         'budget' => 'nullable|numeric|min:0',
         'currency' => 'required|string|max:10',
         'start_date' => 'nullable|date',
@@ -41,15 +44,35 @@ class ProjectsManager extends Component
             });
         }
 
-        $this->projects = $query->with('client', 'mediaFiles', 'payments')->latest()->get();
+        $this->projects = $query->with('client', 'mediaFiles', 'payments')
+            ->orderByRaw("CASE 
+                WHEN status = 'Pending' THEN 1 
+                WHEN status = 'Running' THEN 2 
+                ELSE 3 
+            END")
+            ->latest()
+            ->get();
         $clients = [];
         if ($user->hasRole('master') || $user->hasRole('admin')) {
-            $clients = Client::with('user')->get();
+            $clients = Client::whereHas('user', function($q){
+                $q->where('is_active', true);
+            })->with('user')->get();
         }
 
         $activeCurrencies = Currency::where('is_active', true)->get();
 
         return view('livewire.projects-manager', compact('clients', 'activeCurrencies'));
+    }
+
+    public function addUrl()
+    {
+        $this->project_urls[] = ['label' => '', 'url' => ''];
+    }
+
+    public function removeUrl($index)
+    {
+        unset($this->project_urls[$index]);
+        $this->project_urls = array_values($this->project_urls);
     }
 
     public function create()
@@ -75,12 +98,14 @@ class ProjectsManager extends Component
         $this->project_id_to_edit = $id;
         $this->title = $project->title;
         $this->description = $project->description;
+        $this->remarks = ''; // Don't load existing remarks here, they are in a timeline now
         $this->budget = $project->budget;
         $this->currency = $project->currency ?? 'USD';
-        $this->start_date = $project->start_date;
-        $this->due_date = $project->end_date;
+        $this->start_date = $project->start_date ? $project->start_date->format('Y-m-d') : '';
+        $this->due_date = $project->end_date ? $project->end_date->format('Y-m-d') : '';
         $this->client_id = $project->client_id;
         $this->status = $project->status;
+        $this->project_urls = is_array($project->urls) ? $project->urls : [];
         
         $this->isEditMode = true;
         $this->showModal = true;
@@ -94,6 +119,7 @@ class ProjectsManager extends Component
         $project = new Project([
             'title' => $this->title,
             'description' => $this->description,
+            'urls' => array_filter($this->project_urls, fn($u) => !empty($u['url'])),
             'budget' => $this->budget ?: 0,
             'currency' => $this->currency,
             'start_date' => $this->start_date,
@@ -111,6 +137,15 @@ class ProjectsManager extends Component
 
         $project->save();
 
+        // If a remark was provided during creation, add it to the remarks table
+        if (!empty($this->remarks)) {
+            ProjectRemark::create([
+                'project_id' => $project->id,
+                'user_id' => $user->id,
+                'remark' => $this->remarks
+            ]);
+        }
+
         session()->flash('success', 'Project Created Successfully.');
         $this->closeModal();
         $this->resetInputFields();
@@ -125,6 +160,7 @@ class ProjectsManager extends Component
         $project->update([
             'title' => $this->title,
             'description' => $this->description,
+            'urls' => array_filter($this->project_urls, fn($u) => !empty($u['url'])),
             'budget' => $this->budget ?: 0,
             'currency' => $this->currency,
             'start_date' => $this->start_date,
@@ -137,6 +173,15 @@ class ProjectsManager extends Component
                  $project->client_id = $this->client_id;
                  $project->save();
              }
+        }
+
+        // If a new remark was provided during update, add it to the timeline
+        if (!empty($this->remarks)) {
+            ProjectRemark::create([
+                'project_id' => $project->id,
+                'user_id' => Auth::id(),
+                'remark' => $this->remarks
+            ]);
         }
 
         session()->flash('success', 'Project Updated Successfully.');
@@ -166,6 +211,7 @@ class ProjectsManager extends Component
     {
         $this->title = '';
         $this->description = '';
+        $this->remarks = '';
         $this->budget = '';
         // Set default currency to first active if available
         $defaultCurrency = Currency::where('is_active', true)->first();
@@ -174,6 +220,7 @@ class ProjectsManager extends Component
         $this->due_date = '';
         $this->client_id = '';
         $this->status = '';
+        $this->project_urls = [];
         $this->project_id_to_edit = null;
     }
 }

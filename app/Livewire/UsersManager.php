@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Hash;
 class UsersManager extends Component
 {
     public $users, $roles;
-    public $name, $email, $password, $role_id, $user_id_to_edit;
+    public $name, $email, $password, $role_id, $user_id_to_edit, $is_active = true;
     public $isEditMode = false;
     public $showModal = false;
 
@@ -45,6 +45,7 @@ class UsersManager extends Component
         $this->name = $user->name;
         $this->email = $user->email;
         $this->role_id = $user->role_id;
+        $this->is_active = $user->is_active;
         
         $this->isEditMode = true;
         $this->showModal = true;
@@ -62,6 +63,7 @@ class UsersManager extends Component
             'email' => $this->email,
             'password' => Hash::make($this->password),
             'role_id' => $this->role_id,
+            'is_active' => $this->is_active,
             'created_by' => auth()->id(),
         ]);
 
@@ -80,6 +82,7 @@ class UsersManager extends Component
             'name' => $this->name,
             'email' => $this->email,
             'role_id' => $this->role_id,
+            'is_active' => $this->is_active,
         ];
 
         if (!empty($this->password)) {
@@ -103,6 +106,13 @@ class UsersManager extends Component
         session()->flash('success', 'User Deleted Successfully.');
     }
 
+    public function toggleStatus($id)
+    {
+        $user = User::findOrFail($id);
+        $user->update(['is_active' => !$user->is_active]);
+        session()->flash('success', 'User Status Updated.');
+    }
+
     public function closeModal()
     {
         $this->showModal = false;
@@ -114,6 +124,7 @@ class UsersManager extends Component
         $this->email = '';
         $this->password = '';
         $this->role_id = '';
+        $this->is_active = true;
         $this->user_id_to_edit = null;
     }
 }

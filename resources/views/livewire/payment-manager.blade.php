@@ -23,6 +23,7 @@
             <table class="table table-striped text-nowrap">
                 <thead>
                     <tr>
+                        <th style="width: 5%">Sr. No.</th>
                         <th>Date</th>
                         <th>Project</th>
                         <th>Client</th>
@@ -38,6 +39,7 @@
                 <tbody>
                     @forelse($payments as $payment)
                         <tr>
+                            <td>{{ $loop->iteration }}</td>
                             <td>{{ $payment->payment_date ? $payment->payment_date->format('d M Y') : $payment->created_at->format('d M Y') }}</td>
                             <td><a href="{{ route('projects.show', $payment->project) }}">{{ $payment->project->title }}</a></td>
                             <td>{{ $payment->project->client->company_name ?? 'N/A' }}</td>
@@ -74,7 +76,7 @@
 
     <!-- Modal -->
     @if($showModal)
-    <div class="modal fade show" style="display: block; background-color: rgba(0,0,0,0.5);" tabindex="-1" role="dialog">
+    <div class="modal fade show" style="display: block; background-color: rgba(0,0,0,0.5); overflow-y: auto;" tabindex="-1" role="dialog">
         <div class="modal-dialog" role="document">
             <div class="modal-content">
                 <div class="modal-header">
@@ -129,9 +131,7 @@
                             <div class="col-md-6">
                                 <div class="form-group">
                                     <label>Payment Date</label>
-                                    <div wire:ignore>
-                                        <input type="text" class="form-control datepicker" wire:model="payment_date" autocomplete="off">
-                                    </div>
+                                    <input type="date" class="form-control" wire:model="payment_date">
                                     @error('payment_date') <span class="text-danger small">{{ $message }}</span> @enderror
                                 </div>
                             </div>
@@ -180,21 +180,6 @@
     @endif
 
     @push('scripts')
-    <script>
-        document.addEventListener('livewire:load', function () {
-            initDatePickers();
-        });
-
-        Livewire.hook('message.processed', (message, component) => {
-            initDatePickers();
-        });
-
-        function initDatePickers() {
-            flatpickr(".datepicker", {
-                dateFormat: "Y-m-d",
-                allowInput: true,
-            });
-        }
-    </script>
+    <!-- Datepicker initialized via Alpine.js on the element itself -->
     @endpush
 </div>

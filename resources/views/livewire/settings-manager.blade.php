@@ -93,6 +93,7 @@
                     <table class="table table-hover text-nowrap">
                         <thead>
                             <tr>
+                                <th style="width: 5%">Sr.</th>
                                 <th>Code</th>
                                 <th>Name</th>
                                 <th>Symbol</th>
@@ -103,6 +104,7 @@
                         <tbody>
                             @forelse($currencies as $currency)
                                 <tr>
+                                    <td>{{ $loop->iteration }}</td>
                                     <td><strong>{{ $currency->code }}</strong></td>
                                     <td>{{ $currency->name }}</td>
                                     <td>{{ $currency->symbol }}</td>
@@ -168,7 +170,7 @@
 
     <!-- Currency Modal -->
     @if($showCurrencyModal)
-    <div class="modal fade show" style="display: block; background-color: rgba(0,0,0,0.5);" tabindex="-1" role="dialog">
+    <div class="modal fade show" style="display: block; background-color: rgba(0,0,0,0.5); overflow-y: auto;" tabindex="-1" role="dialog">
         <div class="modal-dialog" role="document">
             <div class="modal-content shadow-lg border-0">
                 <div class="modal-header bg-info py-2">

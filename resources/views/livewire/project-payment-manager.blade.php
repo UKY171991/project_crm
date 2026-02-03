@@ -19,7 +19,8 @@
         <table class="table table-sm table-valign-middle mb-0">
             <thead>
                 <tr class="small text-muted">
-                    <th class="pl-3">Date</th>
+                    <th class="pl-3" style="width: 5%">Sr.</th>
+                    <th>Date</th>
                     <th>Amount</th>
                     <th>Status</th>
                     @if(auth()->user()->hasRole('master') || auth()->user()->hasRole('admin'))
@@ -30,7 +31,8 @@
             <tbody>
                 @forelse($payments as $payment)
                 <tr class="small">
-                    <td class="pl-3 text-muted">{{ $payment->payment_date ? $payment->payment_date->format('d/m/y') : $payment->created_at->format('d/m/y') }}</td>
+                    <td class="pl-3">{{ $loop->iteration }}</td>
+                    <td class="text-muted">{{ $payment->payment_date ? $payment->payment_date->format('d/m/y') : $payment->created_at->format('d/m/y') }}</td>
                     <td><span class="font-weight-bold">{{ $payment->currency }}</span> {{ number_format($payment->amount, 2) }}</td>
                     <td>
                         <span class="badge {{ $payment->payment_status == 'Paid' ? 'badge-success' : ($payment->payment_status == 'Partial' ? 'badge-warning' : 'badge-danger') }}" style="font-size: 0.7rem;">
@@ -58,7 +60,7 @@
     </div>
 
     @if($showModal)
-    <div class="modal fade show" style="display: block; background-color: rgba(0,0,0,0.5);" tabindex="-1" role="dialog">
+    <div class="modal fade show" style="display: block; background-color: rgba(0,0,0,0.5); overflow-y: auto;" tabindex="-1" role="dialog">
         <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
             <div class="modal-content border-0 shadow-lg">
                 <div class="modal-header bg-light py-2">

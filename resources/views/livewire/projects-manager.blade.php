@@ -21,10 +21,13 @@
             <table class="table table-striped text-nowrap">
                 <thead>
                     <tr>
+                        <th style="width: 5%">Sr. No.</th>
                         <th style="width: 20%">Project Title</th>
                         <th style="width: 15%">Client</th>
+                        @if(!auth()->user()->hasRole('user'))
                         <th>Budget</th>
                         <th>Paid</th>
+                        @endif
                         <th>Due Date</th>
                         <th>Status</th>
                         <th style="width: 20%">Actions</th>
@@ -33,14 +36,17 @@
                 <tbody>
                     @foreach($projects as $project)
                         <tr>
+                            <td>{{ $loop->iteration }}</td>
                             <td>
                                 <a href="{{ route('projects.show', $project) }}" class="font-weight-bold">{{ $project->title }}</a>
                                 <br/>
                                 <small>Created {{ $project->created_at->format('d.m.Y') }}</small>
                             </td>
                             <td>{{ $project->client->company_name ?? 'N/A' }}</td>
+                            @if(!auth()->user()->hasRole('user'))
                             <td>{{ $project->currency }} {{ number_format($project->budget, 2) }}</td>
                             <td><span class="text-success">{{ $project->currency }} {{ number_format($project->total_paid, 2) }}</span></td>
+                            @endif
                             <td>
                                 @if($project->end_date)
                                     <span class="{{ \Carbon\Carbon::parse($project->end_date)->isPast() && $project->status != 'Completed' ? 'text-danger font-weight-bold' : '' }}">
@@ -79,7 +85,7 @@
 
     <!-- Modal -->
     @if($showModal)
-    <div class="modal fade show" style="display: block; background-color: rgba(0,0,0,0.5);" tabindex="-1" role="dialog">
+    <div class="modal fade show" style="display: block; background-color: rgba(0,0,0,0.5); overflow-y: auto;" tabindex="-1" role="dialog">
         <div class="modal-dialog modal-lg" role="document">
             <div class="modal-content">
                 <div class="modal-header">
@@ -98,6 +104,42 @@
                         <div class="form-group">
                             <label>Description</label>
                             <textarea class="form-control" wire:model="description" rows="3"></textarea>
+                        </div>
+
+                        <!-- Project URLs -->
+                        <div class="card card-outline card-secondary mb-3">
+                            <div class="card-header py-2">
+                                <h3 class="card-title small font-weight-bold text-muted">Project URLs</h3>
+                                <div class="card-tools">
+                                    <button type="button" class="btn btn-xs btn-primary shadow-sm" wire:click="addUrl">
+                                        <i class="fas fa-plus mr-1"></i> Add URL
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="card-body p-2">
+                                @forelse($project_urls as $index => $item)
+                                    <div class="row no-gutters mb-2">
+                                        <div class="col-md-4 pr-1">
+                                            <input type="text" class="form-control form-control-sm" placeholder="Label (e.g. Admin Panel)" wire:model="project_urls.{{ $index }}.label">
+                                        </div>
+                                        <div class="col-md-7 pr-1">
+                                            <input type="url" class="form-control form-control-sm" placeholder="https://..." wire:model="project_urls.{{ $index }}.url">
+                                        </div>
+                                        <div class="col-md-1">
+                                            <button type="button" class="btn btn-sm btn-danger btn-block" wire:click="removeUrl({{ $index }})">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                @empty
+                                    <p class="text-muted small text-center mb-0 p-2">No URLs added yet. Click 'Add URL' to start.</p>
+                                @endforelse
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Remarks</label>
+                            <textarea class="form-control" wire:model="remarks" rows="2" placeholder="Internal remarks..."></textarea>
                         </div>
                         <div class="row">
                             <div class="col-md-3">
@@ -122,19 +164,15 @@
                             <div class="col-md-6">
                                 <div class="form-group">
                                     <label>Start Date</label>
-                                    <div wire:ignore>
-                                        <input type="text" class="form-control datepicker" wire:model="start_date" id="start_date_picker" autocomplete="off">
-                                    </div>
-                                    @error('start_date') <span class="text-danger">{{ $message }}</span> @enderror
+                                    <input type="date" class="form-control" wire:model="start_date">
+                                    @error('start_date') <span class="text-danger small">{{ $message }}</span> @enderror
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="form-group">
                                     <label>Due Date (End Date)</label>
-                                    <div wire:ignore>
-                                        <input type="text" class="form-control datepicker" wire:model="due_date" id="due_date_picker" autocomplete="off">
-                                    </div>
-                                    @error('due_date') <span class="text-danger">{{ $message }}</span> @enderror
+                                    <input type="date" class="form-control" wire:model="due_date">
+                                    @error('due_date') <span class="text-danger small">{{ $message }}</span> @enderror
                                 </div>
                             </div>
                         </div>
@@ -183,33 +221,6 @@
     @endif
 
     @push('scripts')
-    <script>
-        document.addEventListener('livewire:load', function () {
-            initDatePickers();
-        });
-
-        window.addEventListener('contentChanged', () => {
-            initDatePickers();
-        });
-
-        // For when the modal opens
-        window.addEventListener('show-modal', () => {
-            setTimeout(() => {
-                initDatePickers();
-            }, 100);
-        });
-
-        function initDatePickers() {
-            flatpickr(".datepicker", {
-                dateFormat: "Y-m-d",
-                allowInput: true,
-            });
-        }
-        
-        // Specific listener for when showModal becomes true
-        Livewire.hook('message.processed', (message, component) => {
-            initDatePickers();
-        });
-    </script>
+    <!-- Datepicker scripts removed from here and moved to Alpine.js x-init for better reliability -->
     @endpush
 </div>

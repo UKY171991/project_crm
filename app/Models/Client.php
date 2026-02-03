@@ -12,6 +12,7 @@ class Client extends Model
     protected $fillable = [
         'user_id',
         'company_name',
+        'city',
         'phone',
         'address',
         'status',
@@ -25,5 +26,27 @@ class Client extends Model
     public function projects()
     {
         return $this->hasMany(Project::class);
+    }
+
+    public function getPendingTasksCountAttribute()
+    {
+        return $this->projects()->whereIn('status', ['Pending', 'Running'])->count();
+    }
+
+    public function getCompletedTasksCountAttribute()
+    {
+        return $this->projects()->where('status', 'Completed')->count();
+    }
+
+    public function getTotalPendingPaymentAttribute()
+    {
+        return $this->projects->sum(function($project) {
+            return $project->balance;
+        });
+    }
+
+    public function getCurrencyAttribute()
+    {
+        return $this->projects->first()->currency ?? 'USD';
     }
 }

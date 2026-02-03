@@ -35,6 +35,12 @@ class PaymentManager extends Component
             if ($project) {
                 $this->selectedProjectBudget = $project->budget;
                 $this->selectedProjectBalance = $project->balance;
+                
+                // Default currency to project's currency if not in edit mode 
+                // or if we want it to always sync upon project change
+                if (!$this->isEditMode) {
+                    $this->currency = $project->currency ?: 'USD';
+                }
             }
         } else {
             $this->selectedProjectBudget = 0;
@@ -86,6 +92,7 @@ class PaymentManager extends Component
 
     public function edit($id)
     {
+        $this->isEditMode = true; // Set this first so updatedProjectId knows
         $payment = Payment::findOrFail($id);
         $this->payment_id_to_edit = $id;
         $this->amount = $payment->amount;
@@ -98,7 +105,6 @@ class PaymentManager extends Component
         
         $this->updatedProjectId($this->project_id);
 
-        $this->isEditMode = true;
         $this->showModal = true;
     }
 

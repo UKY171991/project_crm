@@ -106,6 +106,14 @@ class ClientController extends Controller
     }
 
     /**
+     * Display the specified resource.
+     */
+    public function show(Client $client)
+    {
+        return view('clients.show', compact('client'));
+    }
+
+    /**
      * Remove the specified resource from storage.
      */
     public function destroy(Client $client)

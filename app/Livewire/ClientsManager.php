@@ -26,7 +26,16 @@ class ClientsManager extends Component
 
     public function render()
     {
-        $this->clients = Client::with('user')->latest()->get();
+        $this->clients = Client::with('user')
+            ->withCount(['projects as pending_tasks_count' => function ($query) {
+                $query->whereIn('status', ['Pending', 'Running']);
+            }])
+            ->withCount(['projects as completed_tasks_count' => function ($query) {
+                $query->where('status', 'Completed');
+            }])
+            ->orderBy('pending_tasks_count', 'desc')
+            ->get();
+            
         return view('livewire.clients-manager');
     }
 

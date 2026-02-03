@@ -16,6 +16,7 @@ class Project extends Model
         'client_id',
         'title',
         'description',
+        'urls',
         'budget',
         'currency',
         'start_date',
@@ -24,10 +25,21 @@ class Project extends Model
         'created_by',
     ];
 
+    protected $casts = [
+        'start_date' => 'date',
+        'end_date' => 'date',
+        'urls' => 'array',
+    ];
+
+    public function projectRemarks()
+    {
+        return $this->hasMany(ProjectRemark::class)->latest();
+    }
+
     public function getTotalPaidAttribute()
     {
         return $this->payments()
-            ->where('payment_status', 'Paid')
+            ->whereIn('payment_status', ['Paid', 'Partial'])
             ->where('currency', $this->currency ?: 'USD')
             ->sum('amount');
     }

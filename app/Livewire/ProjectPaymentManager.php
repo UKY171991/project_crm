@@ -110,8 +110,8 @@ class ProjectPaymentManager extends Component
     private function resetInputFields()
     {
         $this->amount = '';
-        $defaultCurrency = Currency::where('is_active', true)->first();
-        $this->currency = $defaultCurrency ? $defaultCurrency->code : 'USD';
+        // Default to the current project's currency
+        $this->currency = $this->project->currency ?: 'USD';
         $this->payment_date = '';
         $this->payment_method = 'UPI';
         $this->payment_status = 'Paid';

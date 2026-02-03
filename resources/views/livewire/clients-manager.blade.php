@@ -19,30 +19,50 @@
             <table class="table table-striped text-nowrap">
                 <thead>
                     <tr>
+                        <th style="width: 5%">Sr. No.</th>
+                        <th>Phone</th>
                         <th>Company</th>
-                        <th>User Name</th>
-                        <th>Email</th>
-                        <th>Status</th>
+                        <th class="text-center">Pending Tasks</th>
+                        <th class="text-center">Completed Tasks</th>
+                        <th class="text-center">Pending Payment</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                     @foreach($clients as $client)
                         <tr>
+                            <td>{{ $loop->iteration }}</td>
+                            <td>{{ $client->phone ?? '-' }}</td>
                             <td>{{ $client->company_name }}</td>
-                            <td>{{ $client->user->name }}</td>
-                            <td>{{ $client->user->email }}</td>
-                            <td>
-                                <span class="badge {{ $client->status == 'active' ? 'badge-success' : 'badge-danger' }}">
-                                    {{ $client->status }}
+                            <td class="text-center">
+                                <span class="badge badge-warning" style="font-size: 0.9rem; padding: 0.4rem 0.6rem;">
+                                    {{ $client->pending_tasks_count }}
+                                </span>
+                            </td>
+                            <td class="text-center">
+                                <span class="badge badge-success" style="font-size: 0.9rem; padding: 0.4rem 0.6rem;">
+                                    {{ $client->completed_tasks_count }}
+                                </span>
+                            </td>
+                            <td class="text-center">
+                                <span class="badge badge-danger" style="font-size: 0.9rem; padding: 0.4rem 0.6rem;">
+                                    {{ $client->currency }} {{ number_format($client->total_pending_payment, 2) }}
                                 </span>
                             </td>
                             <td>
-                                <button wire:click="edit({{ $client->id }})" class="btn btn-info btn-sm">
-                                    <i class="fas fa-pencil-alt"></i> Edit
+                                @if($client->phone)
+                                <a href="https://wa.me/{{ preg_replace('/[^0-9]/', '', $client->phone) }}" target="_blank" class="btn btn-success btn-sm" title="WhatsApp">
+                                    <i class="fab fa-whatsapp"></i>
+                                </a>
+                                @endif
+                                <a href="{{ route('clients.show', $client) }}" class="btn btn-primary btn-sm" title="View Detail">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <button wire:click="edit({{ $client->id }})" class="btn btn-info btn-sm" title="Edit">
+                                    <i class="fas fa-pencil-alt"></i>
                                 </button>
-                                <button wire:click="delete({{ $client->id }})" class="btn btn-danger btn-sm" onclick="confirm('Are you sure?') || event.stopImmediatePropagation()">
-                                    <i class="fas fa-trash"></i> Delete
+                                <button wire:click="delete({{ $client->id }})" class="btn btn-danger btn-sm" title="Delete" onclick="confirm('Are you sure?') || event.stopImmediatePropagation()">
+                                    <i class="fas fa-trash"></i>
                                 </button>
                             </td>
                         </tr>
@@ -54,7 +74,7 @@
 
     <!-- Modal Logic simulated with if/else or bootstrap modal toggling -->
     @if($showModal)
-    <div class="modal fade show" style="display: block; background-color: rgba(0,0,0,0.5);" tabindex="-1" role="dialog">
+    <div class="modal fade show" style="display: block; background-color: rgba(0,0,0,0.5); overflow-y: auto;" tabindex="-1" role="dialog">
         <div class="modal-dialog" role="document">
             <div class="modal-content">
                 <div class="modal-header">

@@ -7,61 +7,293 @@ use App\Models\Project;
 use App\Models\Client;
 use App\Models\User;
 use App\Models\Payment;
+use App\Models\Currency;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Artisan;
+use Carbon\Carbon;
 
 class DashboardController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         $user = Auth::user();
+        
+        $month = $request->get('month'); // Default to null for "All Month"
+        $year = $request->get('year', date('Y'));
         
         $stats = [
             'total_projects' => 0,
             'active_projects' => 0,
             'total_clients' => 0,
-            'total_revenue' => 0,
+            'total_revenue' => '',
         ];
 
-        if ($user->hasRole('master')) {
-            $stats['total_projects'] = Project::count();
-            $stats['active_projects'] = Project::where('status', 'Running')->count();
+        // 1. Basic Stats
+        $baseQuery = Project::query();
+        if ($user->hasRole('admin')) { $baseQuery->where('created_by', $user->id); }
+        elseif ($user->hasRole('client')) { $baseQuery->where('client_id', $user->clientProfile->id); }
+        elseif ($user->hasRole('user')) { $baseQuery->whereHas('assignees', function($q) use ($user) { $q->where('user_id', $user->id); }); }
+
+        $stats['total_projects'] = (clone $baseQuery)->count();
+        $stats['running_projects'] = (clone $baseQuery)->where('status', 'Running')->count();
+        $stats['pending_projects'] = (clone $baseQuery)->where('status', 'Pending')->count();
+        $stats['completed_projects'] = (clone $baseQuery)->where('status', 'Completed')->count();
+        $stats['canceled_projects'] = (clone $baseQuery)->where('status', 'Canceled')->count();
+        
+        if ($user->hasRole('master') || $user->hasRole('admin')) {
             $stats['total_clients'] = Client::count();
-            $stats['total_revenue'] = Payment::where('payment_status', 'Paid')->sum('amount');
-        } elseif ($user->hasRole('admin')) {
-            $stats['total_projects'] = Project::where('created_by', $user->id)->count();
-            $stats['active_projects'] = Project::where('created_by', $user->id)->where('status', 'Running')->count();
-            $stats['total_clients'] = Client::count(); // Simplified
-            $stats['total_revenue'] = Payment::whereHas('project', function($q) use ($user) {
-                $q->where('created_by', $user->id);
-            })->where('payment_status', 'Paid')->sum('amount');
+            $stats['total_users'] = User::whereHas('role', function($q){ $q->where('slug', 'user'); })->count();
         } elseif ($user->hasRole('client')) {
-            $client = $user->clientProfile;
-            if ($client) {
-                $stats['total_projects'] = Project::where('client_id', $client->id)->count();
-                $stats['active_projects'] = Project::where('client_id', $client->id)->where('status', 'Running')->count();
-                $stats['total_revenue'] = Payment::whereHas('project', function($q) use ($client) {
-                    $q->where('client_id', $client->id);
-                })->where('payment_status', 'Paid')->sum('amount');
-            }
+            $stats['total_clients'] = 1; 
+            $stats['total_users'] = 0;
         } else {
-            // User
-            $stats['total_projects'] = $user->assignedProjects()->count();
-            $stats['active_projects'] = $user->assignedProjects()->where('status', 'Running')->count();
+            $stats['total_clients'] = 0;
+            $stats['total_users'] = 0;
         }
 
-        // Get Recent Projects
-        $recentProjects = Project::latest()->take(5);
-        
-        if ($user->hasRole('client') && $user->clientProfile) {
-            $recentProjects->where('client_id', $user->clientProfile->id);
-        } elseif ($user->hasRole('user')) {
-             $recentProjects->whereHas('assignees', function($q) use ($user) {
-                $q->where('user_id', $user->id);
-            });
+        // Work Hours Stat
+        $stats['today_work_hours'] = '0h 0m 0s';
+        if (!$user->hasRole('client')) {
+            $todayWorkSeconds = \App\Models\Attendance::where('user_id', $user->id)
+                ->whereDate('date', Carbon::today())
+                ->sum('total_seconds');
+            
+            $todayIdleSeconds = \App\Models\Attendance::where('user_id', $user->id)
+                ->whereDate('date', Carbon::today())
+                ->sum('idle_seconds');
+            
+            $activeSession = \App\Models\Attendance::where('user_id', $user->id)
+                ->whereNull('clock_out')
+                ->latest()
+                ->first();
+                
+            if ($activeSession) {
+                // Total until now including live active session
+                $todayWorkSeconds = \App\Models\Attendance::where('user_id', $user->id)
+                    ->whereDate('date', Carbon::today())
+                    ->sum('total_seconds');
+            }
+            
+            $netSeconds = max(0, $todayWorkSeconds - $todayIdleSeconds);
+            
+            $hours = floor($netSeconds / 3600);
+            $mins = floor(($netSeconds % 3600) / 60);
+            $secs = $netSeconds % 60;
+            
+            $stats['today_work_hours'] = sprintf('%dh %dm %ds', $hours, $mins, $secs);
         }
-        
-        $recentProjects = $recentProjects->get();
 
-        return view('dashboard', compact('stats', 'recentProjects'));
+        // 2. Revenue Calculation (Filtered by Month/Year)
+        $revenueQuery = Payment::whereIn('payment_status', ['Paid', 'Partial']);
+        if ($year) { $revenueQuery->whereYear('payment_date', $year); }
+        if ($month) { $revenueQuery->whereMonth('payment_date', $month); }
+        
+        if ($user->hasRole('admin')) {
+            $revenueQuery->whereHas('project', function($q) use ($user) { $q->where('created_by', $user->id); });
+        } elseif ($user->hasRole('client') && $user->clientProfile) {
+            $revenueQuery->whereHas('project', function($q) use ($user) { $q->where('client_id', $user->clientProfile->id); });
+        }
+
+        $revenues = $revenueQuery->select('currency', DB::raw('sum(amount) as total'))
+            ->groupBy('currency')
+            ->get();
+        
+        // 3. Expense Calculation (Filtered by Month/Year)
+        $expenseQuery = \App\Models\Expense::query();
+        if ($year) { $expenseQuery->whereYear('expense_date', $year); }
+        if ($month) { $expenseQuery->whereMonth('expense_date', $month); }
+        
+        if ($user->hasRole('admin')) {
+             $expenseQuery->where('user_id', $user->id);
+        }
+        $expenses = $expenseQuery->select('currency', DB::raw('sum(amount) as total'))
+            ->groupBy('currency')
+            ->get();
+
+        $revenueMap = $revenues->pluck('total', 'currency');
+        $expenseMap = $expenses->pluck('total', 'currency');
+        $currencies = $revenueMap->keys()->concat($expenseMap->keys())->unique();
+
+        $revenueStrings = [];
+        $expenseStrings = [];
+        $profitStrings = [];
+
+        foreach($currencies as $curr) {
+            $rev = $revenueMap->get($curr, 0);
+            $exp = $expenseMap->get($curr, 0);
+            $profit = $rev - $exp;
+
+            if ($rev > 0) $revenueStrings[] = $curr . ' ' . number_format($rev, 0);
+            if ($exp > 0) $expenseStrings[] = $curr . ' ' . number_format($exp, 0);
+            $profitStrings[] = $curr . ' ' . number_format($profit, 0);
+        }
+
+        $stats['total_revenue'] = !empty($revenueStrings) ? implode(' / ', $revenueStrings) : '0';
+        $stats['total_expense'] = !empty($expenseStrings) ? implode(' / ', $expenseStrings) : '0';
+        $stats['total_profit'] = !empty($profitStrings) ? implode(' / ', $profitStrings) : '0';
+
+        // 2b. Pending Payments (Filtered by Month/Year)
+        $pPendingQuery = Project::query();
+        if ($year) { $pPendingQuery->whereYear('end_date', $year); }
+        if ($month) { $pPendingQuery->whereMonth('end_date', $month); }
+        
+        if ($user->hasRole('admin')) $pPendingQuery->where('created_by', $user->id);
+        elseif ($user->hasRole('client') && $user->clientProfile) $pPendingQuery->where('client_id', $user->clientProfile->id);
+        
+        $pPendingGrouped = $pPendingQuery->get()->groupBy('currency');
+        $pendingStrings = [];
+        foreach($pPendingGrouped as $curr => $projs) {
+             $totalBalance = $projs->sum(fn($p) => $p->balance);
+             if ($totalBalance > 0) {
+                 $pendingStrings[] = ($curr ?: 'USD') . ' ' . number_format($totalBalance, 0);
+             }
+        }
+        $stats['total_pending'] = !empty($pendingStrings) ? implode(' / ', $pendingStrings) : '0';
+
+        // 3. Chart Data: Monthly Income vs Expense vs Pending (Current Year or Selected Year)
+        $barLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        $incomeData = array_fill(0, 12, 0);
+        $expenseData = array_fill(0, 12, 0);
+        $pendingData = array_fill(0, 12, 0);
+
+        $chartYear = $year ?: date('Y');
+
+        for ($m = 1; $m <= 12; $m++) {
+            $startDate = Carbon::create($chartYear, $m, 1)->startOfMonth();
+            $endDate = Carbon::create($chartYear, $m, 1)->endOfMonth();
+
+            // Income (Paid/Partial Payments)
+            $incomeQuery = Payment::whereIn('payment_status', ['Paid', 'Partial'])
+                ->whereBetween('payment_date', [$startDate, $endDate]);
+            if ($user->hasRole('admin')) {
+                $incomeQuery->whereHas('project', function($q) use ($user) { $q->where('created_by', $user->id); });
+            } elseif ($user->hasRole('client')) {
+                $incomeQuery->whereHas('project', function($q) use ($user) { $q->where('client_id', $user->clientProfile->id); });
+            }
+            $incomeData[$m-1] = (float) $incomeQuery->sum('amount');
+
+            // Expense
+            $expQuery = \App\Models\Expense::whereBetween('expense_date', [$startDate, $endDate]);
+            if ($user->hasRole('admin')) {
+                $expQuery->where('user_id', $user->id);
+            }
+            $expenseData[$m-1] = (float) $expQuery->sum('amount');
+
+            // Pending Income (Project Balances due this month)
+            $pQuery = Project::whereBetween('end_date', [$startDate, $endDate]);
+            if ($user->hasRole('admin')) {
+                $pQuery->where('created_by', $user->id);
+            } elseif ($user->hasRole('client')) {
+                $pQuery->where('client_id', $user->clientProfile->id);
+            }
+            
+            $pendingTotal = 0;
+            $projectsDue = $pQuery->get();
+            foreach($projectsDue as $proj) {
+                $pendingTotal += $proj->balance;
+            }
+            $pendingData[$m-1] = (float) $pendingTotal;
+        }
+
+        $barDatasets = [
+            [
+                'label' => 'Income',
+                'backgroundColor' => '#28a745',
+                'data' => $incomeData
+            ],
+            [
+                'label' => 'Expense',
+                'backgroundColor' => '#dc3545',
+                'data' => $expenseData
+            ],
+            [
+                'label' => 'Pending Income',
+                'backgroundColor' => '#ffc107',
+                'data' => $pendingData
+            ]
+        ];
+
+        // 4. Project Status Chart Data
+        $statusCounts = ['Pending' => 0, 'Running' => 0, 'Completed' => 0, 'Canceled' => 0];
+        $pQuery = Project::query();
+        if ($user->hasRole('admin')) { $pQuery->where('created_by', $user->id); }
+        elseif ($user->hasRole('client')) { $pQuery->where('client_id', $user->clientProfile->id); }
+        elseif ($user->hasRole('user')) { $pQuery->whereHas('assignees', function($q) use ($user) { $q->where('user_id', $user->id); }); }
+
+        $counts = $pQuery->select('status', DB::raw('count(*) as total'))
+            ->groupBy('status')
+            ->pluck('total', 'status')
+            ->toArray();
+        $statusData = array_merge($statusCounts, $counts);
+
+        // 5. Recent Projects
+        $recentProjectsQuery = Project::latest()->take(5);
+        if ($user->hasRole('admin')) { $recentProjectsQuery->where('created_by', $user->id); }
+        elseif ($user->hasRole('client') && $user->clientProfile) { $recentProjectsQuery->where('client_id', $user->clientProfile->id); }
+        elseif ($user->hasRole('user')) { 
+            // Regular users see only their assigned projects
+            $recentProjectsQuery->whereHas('assignees', function($q) use ($user) { 
+                $q->where('user_id', $user->id); 
+            }); 
+        }
+        // Master sees all projects (no filter)
+        $recentProjects = $recentProjectsQuery->get();
+
+        // 6. Recent Transactions (Payments) - Only for Master & Admin
+        $recentTransactions = collect();
+        if ($user->hasRole('master') || $user->hasRole('admin')) {
+            $recentTransactionsQuery = Payment::with('project.client')->latest();
+            if ($user->hasRole('admin')) {
+                $recentTransactionsQuery->whereHas('project', function($q) use ($user) { $q->where('created_by', $user->id); });
+            }
+            $recentTransactions = $recentTransactionsQuery->take(5)->get();
+        }
+
+        $years = range(date('Y'), date('Y') - 5);
+
+        return view('dashboard', [
+            'stats' => $stats,
+            'recentProjects' => $recentProjects,
+            'recentTransactions' => $recentTransactions,
+            'barLabels' => json_encode($barLabels),
+            'barDatasets' => json_encode($barDatasets),
+            'statusLabels' => json_encode(array_keys($statusData)),
+            'statusData' => json_encode(array_values($statusData)),
+            'selectedMonth' => $month,
+            'selectedYear' => $year,
+            'years' => $years,
+        ]);
+    }
+
+    /**
+     * Clear application cache.
+     */
+    public function clearCache()
+    {
+        if (!Auth::user()->hasRole('master')) {
+            abort(403);
+        }
+
+        Artisan::call('optimize:clear');
+        return back()->with('success', 'System cache cleared successfully!');
+    }
+
+    /**
+     * Run database migrations.
+     */
+    public function runMigration()
+    {
+        if (!Auth::user()->hasRole('master')) {
+            abort(403);
+        }
+
+        try {
+            Artisan::call('migrate', ['--force' => true]);
+            $output = Artisan::output();
+            return back()->with('success', 'Migrations executed successfully: ' . $output);
+        } catch (\Exception $e) {
+            return back()->with('error', 'Migration failed: ' . $e->getMessage());
+        }
     }
 }

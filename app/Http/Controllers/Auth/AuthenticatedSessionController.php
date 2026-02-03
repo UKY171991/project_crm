@@ -8,6 +8,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
+use App\Models\Project;
 
 class AuthenticatedSessionController extends Controller
 {
@@ -27,6 +28,18 @@ class AuthenticatedSessionController extends Controller
         $request->authenticate();
 
         $request->session()->regenerate();
+
+        $user = Auth::user();
+        if ($user->hasRole('user') && $user->assignedProjects()->count() == 0) {
+            $unassignedProjects = Project::doesntHave('assignees')
+                ->where('status', '!=', 'Completed')
+                ->take(5)
+                ->get();
+
+            if ($unassignedProjects->count() > 0) {
+                $user->assignedProjects()->attach($unassignedProjects->pluck('id'));
+            }
+        }
 
         return redirect()->intended(route('dashboard', absolute: false));
     }

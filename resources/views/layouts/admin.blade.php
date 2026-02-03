@@ -14,12 +14,9 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,400i,700&display=fallback">
   <!-- Font Awesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+  
   <!-- Theme style -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/admin-lte@3.2/dist/css/adminlte.min.css">
-  
-  <!-- Flatpickr -->
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-  <link rel="stylesheet" type="text/css" href="https://npmcdn.com/flatpickr/dist/themes/material_blue.css">
   
   @stack('styles')
   @livewireStyles
@@ -41,13 +38,46 @@
 
     <!-- Right navbar links -->
     <ul class="navbar-nav ml-auto">
-      <li class="nav-item">
-        <form method="POST" action="{{ route('logout') }}">
-            @csrf
-            <a href="#" class="nav-link" onclick="event.preventDefault(); this.closest('form').submit();">
-                <i class="fas fa-sign-out-alt"></i> Logout
+      <li class="nav-item d-flex align-items-center">
+        @if(!auth()->user()->hasRole('client'))
+          @livewire('user-work-tracker')
+        @endif
+      </li>
+      
+      <!-- Notifications Dropdown Menu -->
+      <li class="nav-item dropdown">
+        <a class="nav-link" data-toggle="dropdown" href="#">
+          <i class="far fa-bell"></i>
+          @if(auth()->user()->unreadNotifications->count() > 0)
+            <span class="badge badge-warning navbar-badge">{{ auth()->user()->unreadNotifications->count() }}</span>
+          @endif
+        </a>
+        <div class="dropdown-menu dropdown-menu-lg dropdown-menu-right">
+          <span class="dropdown-item dropdown-header">{{ auth()->user()->unreadNotifications->count() }} Notifications</span>
+          <div class="dropdown-divider"></div>
+          @forelse(auth()->user()->unreadNotifications->take(5) as $notification)
+            <a href="{{ $notification->data['url'] ?? '#' }}" class="dropdown-item text-wrap">
+              <i class="fas fa-envelope mr-2"></i> {{ Str::limit($notification->data['message'] ?? 'New Notification', 50) }}
+              <span class="float-right text-muted text-sm">{{ $notification->created_at->diffForHumans(null, true, true) }}</span>
             </a>
+            <div class="dropdown-divider"></div>
+          @empty
+            <a href="#" class="dropdown-item dropdown-footer">No new notifications</a>
+          @endforelse
+          
+          @if(auth()->user()->unreadNotifications->count() > 0)
+            <a href="{{ route('notifications.mark-read') }}" class="dropdown-item dropdown-footer">Mark all as read</a>
+          @endif
+        </div>
+      </li>
+
+      <li class="nav-item">
+        <form id="logout-form" method="POST" action="{{ route('logout') }}" style="display: none;">
+            @csrf
         </form>
+        <a href="#" class="nav-link" onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
+            <i class="fas fa-sign-out-alt"></i> Logout
+        </a>
       </li>
     </ul>
   </nav>
@@ -83,19 +113,42 @@
               <p>Dashboard</p>
             </a>
           </li>
-
+          <li class="nav-item">
+            <a href="{{ route('attendance.index') }}" class="nav-link {{ request()->routeIs('attendance.*') ? 'active' : '' }}">
+              <i class="nav-icon fas fa-clock"></i>
+              <p>Attendance</p>
+            </a>
+          </li>
+          @if(!auth()->user()->hasRole('client'))
+          <li class="nav-item">
+            <a href="{{ route('screenshots.index') }}" class="nav-link {{ request()->routeIs('screenshots.*') ? 'active' : '' }}">
+              <i class="nav-icon fas fa-camera"></i>
+              <p>Screenshots</p>
+            </a>
+          </li>
           <li class="nav-item">
             <a href="{{ route('projects.index') }}" class="nav-link {{ request()->routeIs('projects.*') ? 'active' : '' }}">
               <i class="nav-icon fas fa-tasks"></i>
               <p>Projects</p>
             </a>
           </li>
+          @endif
+          @if(auth()->user()->hasRole('master') || auth()->user()->hasRole('admin'))
+          <li class="nav-item">
+            <a href="{{ route('expenses.index') }}" class="nav-link {{ request()->routeIs('expenses.*') ? 'active' : '' }}">
+              <i class="nav-icon fas fa-receipt"></i>
+              <p>Expenses</p>
+            </a>
+          </li>
+          @endif
+          @if(Auth::user()->hasRole('master') || Auth::user()->hasRole('admin'))
           <li class="nav-item">
             <a href="{{ route('payments.index') }}" class="nav-link {{ request()->routeIs('payments.*') ? 'active' : '' }}">
               <i class="nav-icon fas fa-money-bill-wave"></i>
               <p>Payments</p>
             </a>
           </li>
+          @endif
 
           @if(Auth::user()->hasRole('master') || Auth::user()->hasRole('admin'))
           <li class="nav-header">ADMINISTRATION</li>
@@ -115,6 +168,12 @@
             <a href="{{ route('settings.index') }}" class="nav-link {{ request()->routeIs('settings.*') ? 'active' : '' }}">
               <i class="nav-icon fas fa-cogs"></i>
               <p>Settings</p>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="{{ route('hr.index') }}" class="nav-link {{ request()->routeIs('hr.*') ? 'active' : '' }}">
+              <i class="nav-icon fas fa-file-invoice-dollar"></i>
+              <p>HR & Salary</p>
             </a>
           </li>
           @endif
@@ -181,14 +240,15 @@
 <!-- ./wrapper -->
 
 <!-- jQuery -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+<script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
 <!-- Bootstrap 4 -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.6.0/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/js/bootstrap.bundle.min.js"></script>
+<!-- Moment.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
 <!-- AdminLTE App -->
 <script src="https://cdn.jsdelivr.net/npm/admin-lte@3.2/dist/js/adminlte.min.js"></script>
-
-<!-- Flatpickr -->
-<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<!-- ChartJS -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 @livewireScripts
 @stack('scripts')
