@@ -100,7 +100,7 @@ class DashboardController extends Controller
             ->get();
         
         // 3. Expense Calculation (Filtered by Month/Year)
-        $expenseQuery = \App\Models\Expense::query();
+        $expenseQuery = \App\Models\Expense::where('status', 'Paid');
         if ($year) { $expenseQuery->whereYear('expense_date', $year); }
         if ($month) { $expenseQuery->whereMonth('expense_date', $month); }
         
@@ -133,8 +133,25 @@ class DashboardController extends Controller
         $stats['total_expense'] = !empty($expenseStrings) ? implode(' / ', $expenseStrings) : '0';
         $stats['total_profit'] = !empty($profitStrings) ? implode(' / ', $profitStrings) : '0';
 
+        // 3b. Pending Expenses Calculation
+        $pendingExpenseQuery = \App\Models\Expense::where('status', 'Pending');
+        if ($year) { $pendingExpenseQuery->whereYear('expense_date', $year); }
+        if ($month) { $pendingExpenseQuery->whereMonth('expense_date', $month); }
+        if ($user->hasRole('admin')) { $pendingExpenseQuery->where('user_id', $user->id); }
+
+        $pendingExpenses = $pendingExpenseQuery->select('currency', DB::raw('sum(amount) as total'))
+            ->groupBy('currency')
+            ->get();
+        
+        $pendingExpStrings = [];
+        foreach($pendingExpenses as $pe) {
+            if ($pe->total > 0) $pendingExpStrings[] = $pe->currency . ' ' . number_format($pe->total, 0);
+        }
+        $stats['total_pending_expense'] = !empty($pendingExpStrings) ? implode(' / ', $pendingExpStrings) : '0'; 
+
+
         // 2b. Pending Payments (Filtered by Month/Year)
-        $pPendingQuery = Project::query();
+        $pPendingQuery = Project::where('status', '!=', 'Canceled');
         if ($year) { $pPendingQuery->whereYear('end_date', $year); }
         if ($month) { $pPendingQuery->whereMonth('end_date', $month); }
         
@@ -156,6 +173,7 @@ class DashboardController extends Controller
         $incomeData = array_fill(0, 12, 0);
         $expenseData = array_fill(0, 12, 0);
         $pendingData = array_fill(0, 12, 0);
+        $pendingExpData = array_fill(0, 12, 0);
 
         $chartYear = $year ?: date('Y');
 
@@ -174,14 +192,14 @@ class DashboardController extends Controller
             $incomeData[$m-1] = (float) $incomeQuery->sum('amount');
 
             // Expense
-            $expQuery = \App\Models\Expense::whereBetween('expense_date', [$startDate, $endDate]);
+            $expQuery = \App\Models\Expense::where('status', 'Paid')->whereBetween('expense_date', [$startDate, $endDate]);
             if ($user->hasRole('admin')) {
                 $expQuery->where('user_id', $user->id);
             }
             $expenseData[$m-1] = (float) $expQuery->sum('amount');
 
             // Pending Income (Project Balances due this month)
-            $pQuery = Project::whereBetween('end_date', [$startDate, $endDate]);
+            $pQuery = Project::where('status', '!=', 'Canceled')->whereBetween('end_date', [$startDate, $endDate]);
             if ($user->hasRole('admin')) {
                 $pQuery->where('created_by', $user->id);
             } elseif ($user->hasRole('client')) {
@@ -194,6 +212,13 @@ class DashboardController extends Controller
                 $pendingTotal += $proj->balance;
             }
             $pendingData[$m-1] = (float) $pendingTotal;
+
+            // Pending Expense
+            $pExpQuery = \App\Models\Expense::where('status', 'Pending')->whereBetween('expense_date', [$startDate, $endDate]);
+            if ($user->hasRole('admin')) {
+                $pExpQuery->where('user_id', $user->id);
+            }
+            $pendingExpData[$m-1] = (float) $pExpQuery->sum('amount');
         }
 
         $barDatasets = [
@@ -211,6 +236,11 @@ class DashboardController extends Controller
                 'label' => 'Pending Income',
                 'backgroundColor' => '#ffc107',
                 'data' => $pendingData
+            ],
+            [
+                'label' => 'Pending Expense',
+                'backgroundColor' => '#fd7e14',
+                'data' => $pendingExpData
             ]
         ];
 
@@ -294,6 +324,33 @@ class DashboardController extends Controller
             return back()->with('success', 'Migrations executed successfully: ' . $output);
         } catch (\Exception $e) {
             return back()->with('error', 'Migration failed: ' . $e->getMessage());
+        }
+    }
+    /**
+     * Run composer update.
+     */
+    public function runComposerUpdate()
+    {
+        if (!Auth::user()->hasRole('master')) {
+            abort(403);
+        }
+
+        try {
+            // Composer update can take a while
+            set_time_limit(600); 
+            
+            // Try to find composer or use default command
+            // On many systems 'composer' is in the path.
+            // We use the --no-interaction flag to prevent hang
+            $process = \Illuminate\Support\Facades\Process::timeout(600)->run('composer update --no-interaction');
+
+            if ($process->successful()) {
+                return back()->with('success', 'Composer update executed successfully: ' . $process->output());
+            } else {
+                return back()->with('error', 'Composer update failed: ' . $process->errorOutput());
+            }
+        } catch (\Exception $e) {
+            return back()->with('error', 'Composer update failed: ' . $e->getMessage());
         }
     }
 }

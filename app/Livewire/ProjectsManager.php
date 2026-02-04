@@ -48,7 +48,8 @@ class ProjectsManager extends Component
             ->orderByRaw("CASE 
                 WHEN status = 'Pending' THEN 1 
                 WHEN status = 'Running' THEN 2 
-                ELSE 3 
+                WHEN status = 'Completed' THEN 3
+                ELSE 4 
             END")
             ->latest()
             ->get();

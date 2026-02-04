@@ -18,6 +18,7 @@ class Expense extends Model
         'category',
         'project_id',
         'user_id',
+        'status',
     ];
 
     protected $casts = [

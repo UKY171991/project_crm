@@ -132,11 +132,11 @@
 
     @if(!auth()->user()->hasRole('user'))
     <div class="row">
-        <div class="col-lg-3 col-6">
+        <div class="col-lg col-md-4 col-6">
             <!-- small box -->
             <div class="small-box bg-olive shadow-sm">
                 <div class="inner">
-                    <h3 style="font-size: 1.2rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{{ $stats['total_revenue'] }}">
+                    <h3 style="font-size: 1.1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{{ $stats['total_revenue'] }}">
                         {{ $stats['total_revenue'] }}
                     </h3>
                     <p>Total Income</p>
@@ -147,11 +147,11 @@
                 <a href="{{ route('payments.index') }}" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
             </div>
         </div>
-        <div class="col-lg-3 col-6">
+        <div class="col-lg col-md-4 col-6">
             <!-- small box -->
             <div class="small-box bg-maroon shadow-sm">
                 <div class="inner">
-                    <h3 style="font-size: 1.2rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{{ $stats['total_expense'] }}">
+                    <h3 style="font-size: 1.1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{{ $stats['total_expense'] }}">
                         {{ $stats['total_expense'] }}
                     </h3>
                     <p>Total Expenses</p>
@@ -162,11 +162,11 @@
                 <a href="{{ route('expenses.index') }}" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
             </div>
         </div>
-        <div class="col-lg-3 col-6">
+        <div class="col-lg col-md-4 col-6">
             <!-- small box -->
             <div class="small-box bg-purple shadow-sm">
                 <div class="inner">
-                    <h3 style="font-size: 1.2rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{{ $stats['total_profit'] }}">
+                    <h3 style="font-size: 1.1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{{ $stats['total_profit'] }}">
                         {{ $stats['total_profit'] }}
                     </h3>
                     <p>Total Net Profit</p>
@@ -177,11 +177,11 @@
                 <div class="small-box-footer" style="min-height: 30px;">&nbsp;</div>
             </div>
         </div>
-        <div class="col-lg-3 col-6">
+        <div class="col-lg col-md-4 col-6">
             <!-- small box -->
             <div class="small-box bg-danger shadow-sm">
                 <div class="inner">
-                    <h3 style="font-size: 1.2rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{{ $stats['total_pending'] }}">
+                    <h3 style="font-size: 1.1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{{ $stats['total_pending'] }}">
                         {{ $stats['total_pending'] }}
                     </h3>
                     <p>Pending Payment</p>
@@ -190,6 +190,21 @@
                     <i class="fas fa-hourglass-half"></i>
                 </div>
                 <div class="small-box-footer" style="min-height: 30px;">&nbsp;</div>
+            </div>
+        </div>
+        <div class="col-lg col-md-4 col-6">
+            <!-- small box -->
+            <div class="small-box bg-orange shadow-sm">
+                <div class="inner">
+                    <h3 style="font-size: 1.1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{{ $stats['total_pending_expense'] }}">
+                        {{ $stats['total_pending_expense'] }}
+                    </h3>
+                    <p>Pending Expense</p>
+                </div>
+                <div class="icon">
+                    <i class="fas fa-file-invoice-dollar"></i>
+                </div>
+                <a href="{{ route('expenses.index') }}" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
             </div>
         </div>
     </div>
@@ -384,10 +399,16 @@
                             <i class="fas fa-eraser mr-2 text-warning"></i> Clear System Cache
                         </button>
                     </form>
-                    <form action="{{ route('system.run-migration') }}" method="POST">
+                    <form action="{{ route('system.run-migration') }}" method="POST" class="mb-2">
                         @csrf
                         <button type="submit" class="btn btn-block btn-light text-left border py-2" onclick="return confirm('Run database migrations? This will attempt to update the database schema.')">
                             <i class="fas fa-database mr-2 text-danger"></i> Run Database Migrations
+                        </button>
+                    </form>
+                    <form action="{{ route('system.composer-update') }}" method="POST">
+                        @csrf
+                        <button type="submit" class="btn btn-block btn-light text-left border py-2" onclick="return confirm('Run composer update? This may take several minutes.')">
+                            <i class="fas fa-sync mr-2 text-primary"></i> Composer Update
                         </button>
                     </form>
                 </div>

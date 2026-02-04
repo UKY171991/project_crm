@@ -74,7 +74,7 @@ class PaymentManager extends Component
         $this->payments = $query->orderBy('payment_date', 'desc')->get();
         $projects = [];
         if ($user->hasRole('master') || $user->hasRole('admin')) {
-            $projects = Project::latest()->get();
+            $projects = Project::where('status', '!=', 'Canceled')->latest()->get();
         }
 
         $activeCurrencies = Currency::where('is_active', true)->get();

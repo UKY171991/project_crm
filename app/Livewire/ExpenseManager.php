@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Auth;
 class ExpenseManager extends Component
 {
     public $expenses;
-    public $amount, $currency = 'USD', $expense_date, $description, $category, $project_id, $expense_id_to_edit;
+    public $amount, $currency = 'USD', $expense_date, $description, $category, $project_id, $expense_id_to_edit, $status = 'Paid';
     public $isEditMode = false;
     public $showModal = false;
 
@@ -22,6 +22,7 @@ class ExpenseManager extends Component
         'description' => 'required|string|max:255',
         'category' => 'nullable|string|max:255',
         'project_id' => 'nullable|exists:projects,id',
+        'status' => 'required|in:Paid,Pending,Rejected',
     ];
 
     public function render()
@@ -72,6 +73,7 @@ class ExpenseManager extends Component
         $this->description = $expense->description;
         $this->category = $expense->category;
         $this->project_id = $expense->project_id;
+        $this->status = $expense->status ?? 'Paid';
         
         $this->showModal = true;
     }
@@ -87,6 +89,7 @@ class ExpenseManager extends Component
             'description' => $this->description,
             'category' => $this->category,
             'project_id' => $this->project_id ?: null,
+            'status' => $this->status,
             'user_id' => Auth::id(),
         ]);
 
@@ -106,6 +109,7 @@ class ExpenseManager extends Component
             'description' => $this->description,
             'category' => $this->category,
             'project_id' => $this->project_id ?: null,
+            'status' => $this->status,
         ]);
 
         session()->flash('success', 'Expense updated successfully.');
@@ -132,6 +136,7 @@ class ExpenseManager extends Component
         $this->description = '';
         $this->category = '';
         $this->project_id = '';
+        $this->status = 'Paid';
         $this->expense_id_to_edit = null;
     }
 }

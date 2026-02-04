@@ -27,6 +27,7 @@
                         <th>Category</th>
                         <th>Project</th>
                         <th>Amount</th>
+                        <th>Status</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
@@ -48,6 +49,11 @@
                                 <strong>{{ $expense->currency }}</strong> {{ number_format($expense->amount, 2) }}
                             </td>
                             <td>
+                                <span class="badge {{ $expense->status == 'Paid' ? 'badge-success' : ($expense->status == 'Pending' ? 'badge-warning' : 'badge-danger') }}">
+                                    {{ $expense->status }}
+                                </span>
+                            </td>
+                            <td>
                                 <button wire:click="edit({{ $expense->id }})" class="btn btn-info btn-xs">
                                     <i class="fas fa-pencil-alt"></i>
                                 </button>
@@ -58,7 +64,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6" class="text-center text-muted">No expenses found.</td>
+                            <td colspan="7" class="text-center text-muted">No expenses found.</td>
                         </tr>
                     @endforelse
                 </tbody>
@@ -136,10 +142,25 @@
                             </div>
                         </div>
 
-                        <div class="form-group">
-                            <label>Expense Date</label>
-                            <input type="date" class="form-control" wire:model="expense_date">
-                            @error('expense_date') <span class="text-danger small">{{ $message }}</span> @enderror
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Expense Date</label>
+                                    <input type="date" class="form-control" wire:model="expense_date">
+                                    @error('expense_date') <span class="text-danger small">{{ $message }}</span> @enderror
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Status</label>
+                                    <select class="form-control" wire:model="status">
+                                        <option value="Paid">Paid</option>
+                                        <option value="Pending">Pending</option>
+                                        <option value="Rejected">Rejected</option>
+                                    </select>
+                                    @error('status') <span class="text-danger small">{{ $message }}</span> @enderror
+                                </div>
+                            </div>
                         </div>
 
                     </form>

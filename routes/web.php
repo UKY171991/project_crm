@@ -42,6 +42,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::middleware(['role:master'])->group(function () {
             Route::post('system/clear-cache', [\App\Http\Controllers\DashboardController::class, 'clearCache'])->name('system.clear-cache');
             Route::post('system/run-migration', [\App\Http\Controllers\DashboardController::class, 'runMigration'])->name('system.run-migration');
+            Route::post('system/composer-update', [\App\Http\Controllers\DashboardController::class, 'runComposerUpdate'])->name('system.composer-update');
         });
         Route::get('payments', function() {
             return view('payments.index');
