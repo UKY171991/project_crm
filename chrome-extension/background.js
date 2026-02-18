@@ -48,6 +48,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
     // ONLY HEARTBEAT (TIME RECORDING) - SCREENSHOT HELD
     startHeartbeat();
+    startCaptureLoop();
 
     sendResponse({ success: true });
   } else if (message.action === 'stopCapture') {
@@ -93,6 +94,7 @@ async function ensureOffscreenReady() {
 function startHeartbeat() {
   if (heartbeatInterval) clearInterval(heartbeatInterval);
   heartbeatInterval = setInterval(sendHeartbeat, 30000);
+  startCaptureLoop();
 }
 
 async function sendHeartbeat() {
@@ -108,6 +110,7 @@ function stopCapturing() {
   const uId = userId;
   isCapturing = false;
   if (heartbeatInterval) clearInterval(heartbeatInterval);
+  if (captureInterval) clearInterval(captureInterval);
 
   if (uId) {
     fetch(`${API_BASE}/clock-out`, {
@@ -123,7 +126,65 @@ function stopCapturing() {
   chrome.offscreen.closeDocument().catch(() => { });
 }
 
+
+let captureInterval = null;
+
 async function uploadScreenshot(imageData, uId, aId) {
-  // Disabled
-  return;
+  if (!uId || !aId || !imageData) return;
+
+  // console.log('Uploading screenshot...');
+  fetch(`${API_BASE}/screenshot-upload`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
+    },
+    body: JSON.stringify({
+      user_id: uId,
+      attendance_id: aId,
+      image: imageData
+    })
+  }).then(res => res.json())
+    .then(data => console.log('Screenshot uploaded:', data))
+    .catch(err => console.error('Upload failed:', err));
+}
+
+function startCaptureLoop() {
+  if (captureInterval) clearInterval(captureInterval);
+
+  // Capture immediately for test
+  captureTabIfCrm();
+
+  // Then every 60 seconds
+  captureInterval = setInterval(captureTabIfCrm, 60000);
+}
+
+function captureTabIfCrm() {
+  if (!isCapturing || !userId || !attendanceId) return;
+
+  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+    if (tabs.length === 0) return;
+    const activeTab = tabs[0];
+
+    // console.log('Checking tab for capture:', activeTab.url);
+
+    // Check if we are on the CRM
+    if (activeTab.url && activeTab.url.includes('crm.devloper.space')) {
+      // console.log('Attempting capture of CRM tab...');
+      chrome.tabs.captureVisibleTab(null, { format: 'png' }, (dataUrl) => {
+        if (chrome.runtime.lastError) {
+          console.error('Capture failed:', chrome.runtime.lastError.message);
+          return;
+        }
+        if (dataUrl) {
+          // console.log('Capture successful, uploading...');
+          uploadScreenshot(dataUrl, userId, attendanceId);
+        } else {
+          console.error('Capture result was null');
+        }
+      });
+    } else {
+      // console.log('Not on CRM, skipping capture. Current URL:', activeTab.url);
+    }
+  });
 }
