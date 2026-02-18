@@ -3,6 +3,7 @@ let isCapturing = false;
 let userId = null;
 let attendanceId = null;
 let heartbeatInterval = null;
+let crmTabId = null;
 
 const API_BASE = 'https://crm.devloper.space/api';
 
@@ -26,10 +27,20 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     // Screenshot capture disabled
     sendResponse({ success: true });
     return true;
-  } else if (message.action === 'startCapture') {
+  } else if (message.action === 'startCapture' || message.action === 'crmPageOpened') {
+    if (isCapturing && userId === message.userId && attendanceId === message.attendanceId) {
+      if (sender.tab) crmTabId = sender.tab.id;
+      sendResponse({ success: true });
+      return true;
+    }
+
     userId = message.userId;
     attendanceId = message.attendanceId;
     isCapturing = true;
+
+    if (sender.tab) {
+      crmTabId = sender.tab.id;
+    }
 
     chrome.storage.local.set({ isCapturing: true, userId, attendanceId });
     chrome.action.setBadgeText({ text: 'ON' });
@@ -54,6 +65,25 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
   return true;
 });
+
+// Listener for tab closure
+chrome.tabs.onRemoved.addListener((tabId, removeInfo) => {
+  if (tabId === crmTabId) {
+    // Check if there are other CRM tabs open
+    chrome.tabs.query({ url: "https://crm.devloper.space/*" }, (tabs) => {
+      if (tabs && tabs.length > 0) {
+        // Switch to another open CRM tab
+        crmTabId = tabs[0].id;
+        console.log('Switched tracking to another CRM tab:', crmTabId);
+      } else {
+        // No CRM tabs left, stop capturing
+        stopCapturing();
+        crmTabId = null;
+      }
+    });
+  }
+});
+
 
 async function ensureOffscreenReady() {
   // Disabled to stop screenshots

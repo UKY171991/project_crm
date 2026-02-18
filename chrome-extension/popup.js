@@ -1,4 +1,5 @@
 // Popup script
+const openCrmBtn = document.getElementById('openCrmBtn');
 const startBtn = document.getElementById('startBtn');
 const stopBtn = document.getElementById('stopBtn');
 const userIdInput = document.getElementById('userId');
@@ -139,6 +140,11 @@ startBtn.onclick = async () => {
         startBtn.disabled = false;
         startBtn.textContent = '▶️ Start Time Recording';
     }
+};
+
+openCrmBtn.onclick = () => {
+    chrome.tabs.create({ url: CRM_BASE_URL });
+    window.close(); // Close popup
 };
 
 stopBtn.onclick = () => {
