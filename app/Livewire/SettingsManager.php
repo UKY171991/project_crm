@@ -18,6 +18,15 @@ class SettingsManager extends Component
     public $new_favicon;
     public $current_logo;
     public $current_favicon;
+    public $registration_enabled;
+
+    // Cron Settings
+    public $cron_email;
+    public $cron_key;
+
+    // Mail Settings
+    public $mail_mailer = 'smtp';
+    public $mail_host, $mail_port, $mail_username, $mail_password, $mail_encryption, $mail_from_address, $mail_from_name;
 
     // Currency Settings
     public $currencies;
@@ -30,6 +39,20 @@ class SettingsManager extends Component
         $this->system_title = Setting::get('system_title', 'Project Management System');
         $this->current_logo = Setting::get('system_logo');
         $this->current_favicon = Setting::get('system_favicon');
+        $this->registration_enabled = Setting::get('registration_enabled', true) == '1';
+        $this->cron_email = Setting::get('cron_email', 'uky171991@gmail.com');
+        $this->cron_key = Setting::get('cron_key', 'crm_tasks_cron_2026');
+
+        // Mail settings from database
+        $this->mail_mailer = Setting::get('mail_mailer', 'smtp');
+        $this->mail_host = Setting::get('mail_host');
+        $this->mail_port = Setting::get('mail_port', '587');
+        $this->mail_username = Setting::get('mail_username');
+        $this->mail_password = Setting::get('mail_password');
+        $this->mail_encryption = Setting::get('mail_encryption', 'tls');
+        $this->mail_from_address = Setting::get('mail_from_address');
+        $this->mail_from_name = Setting::get('mail_from_name', $this->system_title);
+
         $this->loadCurrencies();
     }
 
@@ -44,7 +67,19 @@ class SettingsManager extends Component
             'system_title' => 'required|string|max:255',
             'new_logo' => 'nullable|image|max:2048', // 2MB
             'new_favicon' => 'nullable|image|max:1024', // 1MB
+            'cron_email' => 'required|email',
+            'cron_key' => 'required|string',
+            'mail_mailer' => 'required|in:smtp,sendmail,log',
+            'mail_from_address' => 'required|email',
+            'mail_from_name' => 'required|string',
         ]);
+
+        if ($this->mail_mailer === 'smtp') {
+            $this->validate([
+                'mail_host' => 'required',
+                'mail_port' => 'required|numeric',
+            ]);
+        }
 
         Setting::set('system_title', $this->system_title);
 
@@ -67,6 +102,20 @@ class SettingsManager extends Component
             $this->current_favicon = $faviconPath;
             $this->new_favicon = null;
         }
+
+        Setting::set('registration_enabled', $this->registration_enabled);
+        Setting::set('cron_email', $this->cron_email);
+        Setting::set('cron_key', $this->cron_key);
+
+        // Save Mail Settings
+        Setting::set('mail_mailer', $this->mail_mailer);
+        Setting::set('mail_host', $this->mail_host);
+        Setting::set('mail_port', $this->mail_port);
+        Setting::set('mail_username', $this->mail_username);
+        Setting::set('mail_password', $this->mail_password);
+        Setting::set('mail_encryption', $this->mail_encryption);
+        Setting::set('mail_from_address', $this->mail_from_address);
+        Setting::set('mail_from_name', $this->mail_from_name);
 
         session()->flash('success', 'General settings updated successfully.');
         $this->dispatch('settingsUpdated');

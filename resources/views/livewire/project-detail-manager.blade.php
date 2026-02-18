@@ -305,25 +305,53 @@
                 <div class="card-body">
                     <div class="form-group pb-2 mb-2 border-bottom">
                         <label class="small text-muted mb-1">Upload Screenshot (Max 10MB)</label>
-                        <div class="custom-file custom-file-sm">
-                             <input type="file" class="custom-file-input" id="photoUpload" wire:model="photo">
-                             <label class="custom-file-label text-truncate" for="photoUpload">
-                                 @if($photo) {{ $photo->getClientOriginalName() }} @else Choose Image @endif
-                             </label>
+                        <div x-data="{ uploading: false, progress: 0 }"
+                             x-on:livewire-upload-start="uploading = true"
+                             x-on:livewire-upload-finish="uploading = false"
+                             x-on:livewire-upload-error="uploading = false"
+                             x-on:livewire-upload-progress="progress = $event.detail.progress">
+                             
+                            <div class="custom-file custom-file-sm">
+                                 <input type="file" class="custom-file-input" id="photoUpload" wire:model="photo">
+                                 <label class="custom-file-label text-truncate" for="photoUpload">
+                                     @if($photo) {{ $photo->getClientOriginalName() }} @else Choose Image @endif
+                                 </label>
+                            </div>
+
+                            <!-- Progress Bar -->
+                            <div x-show="uploading" class="progress progress-xxs mt-2">
+                                <div class="progress-bar bg-success" role="progressbar" x-bind:style="'width: ' + progress + '%'"></div>
+                            </div>
                         </div>
-                        <div wire:loading wire:target="photo" class="text-info text-xs mt-1"><i class="fas fa-spinner fa-spin mr-1"></i>Uploading...</div>
                         @error('photo') <span class="text-danger xsmall">{{ $message }}</span> @enderror
                     </div>
                     
                     <div class="form-group">
-                        <label class="small text-muted mb-1">Upload Video (Max 200MB - MP4, WebM, MKV, etc.)</label>
-                        <div class="custom-file custom-file-sm">
-                             <input type="file" class="custom-file-input" id="videoUpload" wire:model="video">
-                             <label class="custom-file-label text-truncate" for="videoUpload">
-                                  @if($video) {{ $video->getClientOriginalName() }} @else Choose Video @endif
-                             </label>
+                        <label class="small text-muted mb-1">Upload Video (Max 500MB)</label>
+                        <div x-data="{ uploading: false, progress: 0 }"
+                             x-on:livewire-upload-start="uploading = true"
+                             x-on:livewire-upload-finish="uploading = false"
+                             x-on:livewire-upload-error="uploading = false"
+                             x-on:livewire-upload-progress="progress = $event.detail.progress">
+
+                            <div class="custom-file custom-file-sm">
+                                 <input type="file" class="custom-file-input" id="videoUpload" wire:model="video">
+                                 <label class="custom-file-label text-truncate" for="videoUpload">
+                                      @if($video) {{ $video->getClientOriginalName() }} @else Choose Video @endif
+                                 </label>
+                            </div>
+
+                            <!-- Progress Bar -->
+                            <div x-show="uploading" class="mt-2">
+                                <div class="d-flex justify-content-between xsmall mb-1">
+                                    <span class="text-info"><i class="fas fa-spinner fa-spin mr-1"></i> Uploading...</span>
+                                    <span x-text="progress + '%'"></span>
+                                </div>
+                                <div class="progress progress-xs">
+                                    <div class="progress-bar bg-info progress-bar-striped progress-bar-animated" role="progressbar" x-bind:style="'width: ' + progress + '%'"></div>
+                                </div>
+                            </div>
                         </div>
-                        <div wire:loading wire:target="video" class="text-info text-xs mt-1"><i class="fas fa-spinner fa-spin mr-1"></i>Uploading...</div>
                          @error('video') <span class="text-danger xsmall">{{ $message }}</span> @enderror
                     </div>
                 </div>

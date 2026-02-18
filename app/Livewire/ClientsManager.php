@@ -33,6 +33,9 @@ class ClientsManager extends Component
             ->withCount(['projects as completed_tasks_count' => function ($query) {
                 $query->where('status', 'Completed');
             }])
+            ->with(['projects.payments' => function($query) {
+                $query->where('payment_status', 'Paid');
+            }])
             ->orderBy('pending_tasks_count', 'desc')
             ->get();
             
@@ -123,7 +126,15 @@ class ClientsManager extends Component
     public function delete($id)
     {
         $client = Client::findOrFail($id);
-        $client->user->delete(); // Cascades
+        
+        // Delete the associated user if exists
+        if ($client->user) {
+            $client->user->delete();
+        }
+        
+        // Delete the client (this will also handle cascading)
+        $client->delete();
+        
         session()->flash('success', 'Client Deleted Successfully.');
     }
 

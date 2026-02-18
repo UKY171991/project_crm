@@ -7,6 +7,7 @@ use App\Models\Expense;
 use App\Models\Project;
 use App\Models\Currency;
 use Illuminate\Support\Facades\Auth;
+use Carbon\Carbon;
 
 class ExpenseManager extends Component
 {
@@ -14,6 +15,17 @@ class ExpenseManager extends Component
     public $amount, $currency = 'USD', $expense_date, $description, $category, $project_id, $expense_id_to_edit, $status = 'Paid';
     public $isEditMode = false;
     public $showModal = false;
+    public $selectedMonth = '';
+    public $totalAmount = 0;
+    public $paidAmount = 0;
+    public $pendingAmount = 0;
+    public $rejectedAmount = 0;
+
+    public function mount()
+    {
+        // Set default to current month
+        $this->selectedMonth = date('Y-m');
+    }
 
     protected $rules = [
         'amount' => 'required|numeric|min:0',
@@ -38,7 +50,19 @@ class ExpenseManager extends Component
             $query->where('user_id', $user->id);
         }
 
-        $this->expenses = $query->orderBy('expense_date', 'desc')->get();
+        // Apply month filter if selected
+        if ($this->selectedMonth) {
+            $query->whereMonth('expense_date', '=', Carbon::parse($this->selectedMonth)->month)
+                  ->whereYear('expense_date', '=', Carbon::parse($this->selectedMonth)->year);
+        }
+
+        $this->expenses = $query->orderByRaw("FIELD(status, 'Pending', 'Rejected', 'Paid') ASC")
+                           ->orderBy('expense_date', 'desc')
+                           ->orderBy('created_at', 'desc')
+                           ->get();
+        
+        // Calculate totals based on filtered expenses
+        $this->calculateTotals();
         
         $projects = [];
         if ($user->hasRole('master') || $user->hasRole('admin')) {
@@ -50,8 +74,14 @@ class ExpenseManager extends Component
         }
 
         $activeCurrencies = Currency::where('is_active', true)->get();
+        
+        // Get available months for filter dropdown
+        $availableMonths = Expense::selectRaw('DISTINCT DATE_FORMAT(expense_date, "%Y-%m") as month')
+            ->whereNotNull('expense_date')
+            ->orderBy('month', 'desc')
+            ->pluck('month');
 
-        return view('livewire.expense-manager', compact('projects', 'activeCurrencies'));
+        return view('livewire.expense-manager', compact('projects', 'activeCurrencies', 'availableMonths'));
     }
 
     public function create()
@@ -138,5 +168,34 @@ class ExpenseManager extends Component
         $this->project_id = '';
         $this->status = 'Paid';
         $this->expense_id_to_edit = null;
+    }
+    
+    public function updatedSelectedMonth()
+    {
+        // This will trigger re-render and recalculation
+    }
+    
+    private function calculateTotals()
+    {
+        $this->totalAmount = 0;
+        $this->paidAmount = 0;
+        $this->pendingAmount = 0;
+        $this->rejectedAmount = 0;
+        
+        foreach ($this->expenses as $expense) {
+            $this->totalAmount += $expense->amount;
+            
+            switch ($expense->status) {
+                case 'Paid':
+                    $this->paidAmount += $expense->amount;
+                    break;
+                case 'Pending':
+                    $this->pendingAmount += $expense->amount;
+                    break;
+                case 'Rejected':
+                    $this->rejectedAmount += $expense->amount;
+                    break;
+            }
+        }
     }
 }

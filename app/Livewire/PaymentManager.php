@@ -17,6 +17,17 @@ class PaymentManager extends Component
     public $showModal = false;
     public $selectedProjectBudget = 0;
     public $selectedProjectBalance = 0;
+    public $selectedMonth = '';
+    public $totalAmount = 0;
+    public $paidAmount = 0;
+    public $unpaidAmount = 0;
+    public $partialAmount = 0;
+
+    public function mount()
+    {
+        // Set default to current month
+        $this->selectedMonth = date('Y-m');
+    }
 
     protected $rules = [
         'amount' => 'required|numeric|min:0',
@@ -71,15 +82,31 @@ class PaymentManager extends Component
             });
         }
 
+        // Apply month filter if selected
+        if ($this->selectedMonth) {
+            $query->whereMonth('payment_date', '=', Carbon::parse($this->selectedMonth)->month)
+                  ->whereYear('payment_date', '=', Carbon::parse($this->selectedMonth)->year);
+        }
+
         $this->payments = $query->orderBy('payment_date', 'desc')->get();
+        
+        // Calculate totals based on filtered payments
+        $this->calculateTotals();
+        
         $projects = [];
         if ($user->hasRole('master') || $user->hasRole('admin')) {
             $projects = Project::where('status', '!=', 'Canceled')->latest()->get();
         }
 
         $activeCurrencies = Currency::where('is_active', true)->get();
+        
+        // Get available months for filter dropdown
+        $availableMonths = Payment::selectRaw('DISTINCT DATE_FORMAT(payment_date, "%Y-%m") as month')
+            ->whereNotNull('payment_date')
+            ->orderBy('month', 'desc')
+            ->pluck('month');
 
-        return view('livewire.payment-manager', compact('projects', 'activeCurrencies'));
+        return view('livewire.payment-manager', compact('projects', 'activeCurrencies', 'availableMonths'));
     }
 
     public function create()
@@ -170,5 +197,34 @@ class PaymentManager extends Component
         $this->payment_id_to_edit = null;
         $this->selectedProjectBudget = 0;
         $this->selectedProjectBalance = 0;
+    }
+    
+    public function updatedSelectedMonth()
+    {
+        // This will trigger re-render and recalculation
+    }
+    
+    private function calculateTotals()
+    {
+        $this->totalAmount = 0;
+        $this->paidAmount = 0;
+        $this->unpaidAmount = 0;
+        $this->partialAmount = 0;
+        
+        foreach ($this->payments as $payment) {
+            $this->totalAmount += $payment->amount;
+            
+            switch ($payment->payment_status) {
+                case 'Paid':
+                    $this->paidAmount += $payment->amount;
+                    break;
+                case 'Unpaid':
+                    $this->unpaidAmount += $payment->amount;
+                    break;
+                case 'Partial':
+                    $this->partialAmount += $payment->amount;
+                    break;
+            }
+        }
     }
 }

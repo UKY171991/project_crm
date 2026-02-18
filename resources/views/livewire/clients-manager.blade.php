@@ -25,11 +25,12 @@
                         <th class="text-center">Pending Tasks</th>
                         <th class="text-center">Completed Tasks</th>
                         <th class="text-center">Pending Payment</th>
+                        <th class="text-center">Completed Payment</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach($clients as $client)
+                    @forelse($clients as $client)
                         <tr>
                             <td>{{ $loop->iteration }}</td>
                             <td>{{ $client->phone ?? '-' }}</td>
@@ -49,6 +50,11 @@
                                     {{ $client->currency }} {{ number_format($client->total_pending_payment, 2) }}
                                 </span>
                             </td>
+                            <td class="text-center">
+                                <span class="badge badge-success" style="font-size: 0.9rem; padding: 0.4rem 0.6rem;">
+                                    {{ $client->currency }} {{ number_format($client->total_completed_payment, 2) }}
+                                </span>
+                            </td>
                             <td>
                                 @if($client->phone)
                                 <a href="https://wa.me/{{ preg_replace('/[^0-9]/', '', $client->phone) }}" target="_blank" class="btn btn-success btn-sm" title="WhatsApp">
@@ -66,7 +72,11 @@
                                 </button>
                             </td>
                         </tr>
-                    @endforeach
+                    @empty
+                        <tr>
+                            <td colspan="8" class="text-center text-muted">No clients found.</td>
+                        </tr>
+                    @endforelse
                 </tbody>
             </table>
         </div>

@@ -19,7 +19,7 @@ class DashboardController extends Controller
     {
         $user = Auth::user();
         
-        $month = $request->get('month'); // Default to null for "All Month"
+        $month = $request->get('month', date('n')); // Default to current month
         $year = $request->get('year', date('Y'));
         
         $stats = [
@@ -352,5 +352,60 @@ class DashboardController extends Controller
         } catch (\Exception $e) {
             return back()->with('error', 'Composer update failed: ' . $e->getMessage());
         }
+    }
+    /**
+     * Fix storage link issue.
+     */
+    public function fixStorageLink()
+    {
+        if (!Auth::user()->hasRole('master') && !Auth::user()->hasRole('admin')) {
+            abort(403);
+        }
+
+        try {
+            // 1. Fix APP_URL in .env if it's localhost but we're on a domain
+            $currentUrl = url('/');
+            $envAppUrl = config('app.url');
+            
+            if (str_contains($envAppUrl, '127.0.0.1') || str_contains($envAppUrl, 'localhost')) {
+                if (!str_contains($currentUrl, '127.0.0.1') && !str_contains($currentUrl, 'localhost')) {
+                    $envPath = base_path('.env');
+                    if (file_exists($envPath)) {
+                        $content = file_get_contents($envPath);
+                        $content = preg_replace('/^APP_URL=.*$/m', 'APP_URL=' . $currentUrl, $content);
+                        file_put_contents($envPath, $content);
+                        Artisan::call('config:clear');
+                    }
+                }
+            }
+
+            // 2. Fix Storage Link
+            $link = public_path('storage');
+            if (file_exists($link)) {
+                // On some hosting, it might be a folder instead of a link
+                if (is_link($link)) {
+                    unlink($link);
+                } else {
+                    // Force delete if it's a directory (might be a failed previous attempt)
+                    $this->deleteDirectory($link);
+                }
+            }
+
+            Artisan::call('storage:link');
+            
+            return back()->with('success', 'System maintenance completed! APP_URL updated and Storage Link recreated. Images should now load.');
+        } catch (\Exception $e) {
+            return back()->with('error', 'Maintenance failed: ' . $e->getMessage());
+        }
+    }
+
+    private function deleteDirectory($dir) {
+        if (!file_exists($dir)) return true;
+        if (!is_dir($dir)) return unlink($dir);
+        foreach (scandir($dir) as $item) {
+            if ($item == '.' || $item == '..') continue;
+            if (!$this->deleteDirectory($dir . DIRECTORY_SEPARATOR . $item)) return false;
+        }
+        return rmdir($dir);
     }
 }

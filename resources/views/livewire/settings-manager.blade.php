@@ -24,6 +24,14 @@
                             @error('system_title') <span class="text-danger">{{ $message }}</span> @enderror
                         </div>
 
+                        <div class="form-group">
+                            <div class="custom-control custom-switch">
+                                <input type="checkbox" class="custom-control-input" id="registration_enabled" wire:model="registration_enabled">
+                                <label class="custom-control-label" for="registration_enabled">Enable User Registration</label>
+                            </div>
+                            <small class="form-text text-muted">If disabled, new users cannot register.</small>
+                        </div>
+
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="form-group">
@@ -62,6 +70,99 @@
                                 </div>
                             </div>
                         </div>
+
+                        <hr>
+                        <h5>Cron Job Settings</h5>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="cron_email">Cron Notification Email</label>
+                                    <input type="email" class="form-control" id="cron_email" wire:model="cron_email">
+                                    @error('cron_email') <span class="text-danger">{{ $message }}</span> @enderror
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="cron_key">Cron Secret Key</label>
+                                    <input type="text" class="form-control" id="cron_key" wire:model="cron_key">
+                                    @error('cron_key') <span class="text-danger">{{ $message }}</span> @enderror
+                                </div>
+                            </div>
+                        </div>
+                        <div class="alert alert-info py-2 small">
+                            <strong>Cron Command:</strong><br>
+                            <code>curl -s "{{ url('/cron/pending-tasks?cron_key=' . $cron_key) }}"</code>
+                        </div>
+
+                        <hr>
+                        <h5>Mail / SMTP Settings</h5>
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label>Mail Driver</label>
+                                    <select class="form-control" wire:model.live="mail_mailer">
+                                        <option value="smtp">SMTP (Recommended)</option>
+                                        <option value="sendmail">Simple PHP Mail (Sendmail)</option>
+                                        <option value="log">Log (For Testing)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label>From Address</label>
+                                    <input type="email" class="form-control" wire:model="mail_from_address">
+                                    @error('mail_from_address') <span class="text-danger small">{{ $message }}</span> @enderror
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label>From Name</label>
+                                    <input type="text" class="form-control" wire:model="mail_from_name">
+                                    @error('mail_from_name') <span class="text-danger small">{{ $message }}</span> @enderror
+                                </div>
+                            </div>
+                        </div>
+
+                        @if($mail_mailer == 'smtp')
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>SMTP Host</label>
+                                    <input type="text" class="form-control" wire:model="mail_host" placeholder="smtp.gmail.com">
+                                    @error('mail_host') <span class="text-danger small">{{ $message }}</span> @enderror
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label>SMTP Port</label>
+                                    <input type="text" class="form-control" wire:model="mail_port" placeholder="587">
+                                    @error('mail_port') <span class="text-danger small">{{ $message }}</span> @enderror
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label>Encryption</label>
+                                    <select class="form-control" wire:model="mail_encryption">
+                                        <option value="tls">TLS</option>
+                                        <option value="ssl">SSL</option>
+                                        <option value="none">None</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>SMTP Username</label>
+                                    <input type="text" class="form-control" wire:model="mail_username">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>SMTP Password</label>
+                                    <input type="password" class="form-control" wire:model="mail_password">
+                                </div>
+                            </div>
+                        </div>
+                        @endif
                     </div>
                     <!-- /.card-body -->
 

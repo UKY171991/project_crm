@@ -38,6 +38,14 @@
 
     <!-- Right navbar links -->
     <ul class="navbar-nav ml-auto">
+      <!-- User Info -->
+      <li class="nav-item d-flex align-items-center mr-2">
+        <div class="info">
+          <a href="#" class="d-block">{{ Auth::user()->name }}</a>
+          <small class="text-muted">{{ Auth::user()->role->name ?? 'User' }}</small>
+        </div>
+      </li>
+      
       <li class="nav-item d-flex align-items-center">
         @if(!auth()->user()->hasRole('client'))
           @livewire('user-work-tracker')
@@ -95,14 +103,6 @@
 
     <!-- Sidebar -->
     <div class="sidebar">
-      <!-- Sidebar user (optional) -->
-      <div class="user-panel mt-3 pb-3 mb-3 d-flex">
-        <div class="info">
-          <a href="#" class="d-block">{{ Auth::user()->name }}</a>
-          <small class="text-muted">{{ Auth::user()->role->name ?? 'User' }}</small>
-        </div>
-      </div>
-
       <!-- Sidebar Menu -->
       <nav class="mt-2">
         <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">

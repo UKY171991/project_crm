@@ -201,7 +201,7 @@ class ProjectDetailManager extends Component
     public function updatedVideo()
     {
         $this->validate([
-            'video' => 'mimes:mp4,mov,qt,webm,mkv,avi,wmv|max:204800', // 200MB
+            'video' => 'required|mimes:mp4,mov,qt,webm,mkv,avi,wmv,flv,3gp|max:512000', // Increased to 500MB
         ]);
 
         $this->handleUpload($this->video, 'video', 'videos');

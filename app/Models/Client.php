@@ -45,6 +45,13 @@ class Client extends Model
         });
     }
 
+    public function getTotalCompletedPaymentAttribute()
+    {
+        return $this->projects()->with('payments')->get()->sum(function($project) {
+            return $project->payments->where('payment_status', 'Paid')->sum('amount');
+        });
+    }
+
     public function getCurrencyAttribute()
     {
         return $this->projects->first()->currency ?? 'USD';

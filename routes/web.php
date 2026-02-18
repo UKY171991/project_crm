@@ -7,6 +7,9 @@ Route::get('/', function () {
     return view('welcome');
 });
 
+// Cron Job Route
+Route::get('/cron/pending-tasks', [\App\Http\Controllers\CronController::class, 'sendPendingTasksEmail']);
+
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/dashboard', [\App\Http\Controllers\DashboardController::class, 'index'])->name('dashboard');
 
@@ -43,6 +46,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::post('system/clear-cache', [\App\Http\Controllers\DashboardController::class, 'clearCache'])->name('system.clear-cache');
             Route::post('system/run-migration', [\App\Http\Controllers\DashboardController::class, 'runMigration'])->name('system.run-migration');
             Route::post('system/composer-update', [\App\Http\Controllers\DashboardController::class, 'runComposerUpdate'])->name('system.composer-update');
+            Route::post('system/fix-storage', [\App\Http\Controllers\DashboardController::class, 'fixStorageLink'])->name('system.fix-storage');
         });
         Route::get('payments', function() {
             return view('payments.index');

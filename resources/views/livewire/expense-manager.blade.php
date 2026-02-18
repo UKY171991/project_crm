@@ -1,3 +1,7 @@
+@php
+    use Carbon\Carbon;
+@endphp
+
 <div>
     @if(session()->has('success'))
         <div class="alert alert-success alert-dismissible fade show" role="alert">
@@ -12,12 +16,60 @@
         <div class="card-header">
             <h3 class="card-title">Expenses</h3>
             <div class="card-tools">
-                <button wire:click="create" class="btn btn-primary btn-sm">
-                    <i class="fas fa-plus"></i> Record Expense
-                </button>
+                <div class="d-flex align-items-center gap-2">
+                    <!-- Month Filter -->
+                    <select class="form-control form-control-sm" wire:model="selectedMonth" style="width: 150px;">
+                        <option value="">All Months</option>
+                        @foreach($availableMonths as $month)
+                            <option value="{{ $month }}">{{ Carbon::parse($month . '-01')->format('M Y') }}</option>
+                        @endforeach
+                    </select>
+                    
+                    <button wire:click="create" class="btn btn-primary btn-sm">
+                        <i class="fas fa-plus"></i> Record Expense
+                    </button>
+                </div>
             </div>
         </div>
-        <div class="card-body p-0 table-responsive">
+        <div class="card-body p-0">
+            <!-- Totals Section -->
+            <div class="row p-3 bg-light">
+                <div class="col-md-3">
+                    <div class="card border-primary">
+                        <div class="card-body text-center py-2">
+                            <h6 class="card-title mb-1 text-primary">Total Amount</h6>
+                            <h5 class="mb-0">{{ number_format($totalAmount, 2) }}</h5>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card border-success">
+                        <div class="card-body text-center py-2">
+                            <h6 class="card-title mb-1 text-success">Paid Amount</h6>
+                            <h5 class="mb-0">{{ number_format($paidAmount, 2) }}</h5>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card border-warning">
+                        <div class="card-body text-center py-2">
+                            <h6 class="card-title mb-1 text-warning">Pending Amount</h6>
+                            <h5 class="mb-0">{{ number_format($pendingAmount, 2) }}</h5>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card border-danger">
+                        <div class="card-body text-center py-2">
+                            <h6 class="card-title mb-1 text-danger">Rejected Amount</h6>
+                            <h5 class="mb-0">{{ number_format($rejectedAmount, 2) }}</h5>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Table -->
+            <div class="table-responsive">
             <table class="table table-striped text-nowrap">
                 <thead>
                     <tr>
@@ -69,6 +121,7 @@
                     @endforelse
                 </tbody>
             </table>
+            </div>
         </div>
     </div>
 

@@ -384,7 +384,7 @@
             </div>
             @endif
 
-            @if(auth()->user()->hasRole('master'))
+            @if(auth()->user()->hasRole('master') || auth()->user()->hasRole('admin'))
             <div class="card card-warning shadow-sm border-0">
                 <div class="card-header border-0">
                     <h3 class="card-title font-weight-bold text-dark">
@@ -393,6 +393,14 @@
                     </h3>
                 </div>
                 <div class="card-body">
+                    <form action="{{ route('system.fix-storage') }}" method="POST" class="mb-2">
+                        @csrf
+                        <button type="submit" class="btn btn-block btn-light text-left border py-2" onclick="return confirm('Attempt to fix storage link? This resolves issues where uploaded images/videos don\'t show up.')">
+                            <i class="fas fa-link mr-2 text-success"></i> Fix Image/Folder Issue
+                        </button>
+                    </form>
+                    
+                    @if(auth()->user()->hasRole('master'))
                     <form action="{{ route('system.clear-cache') }}" method="POST" class="mb-2">
                         @csrf
                         <button type="submit" class="btn btn-block btn-light text-left border py-2" onclick="return confirm('Clear all system cache?')">
@@ -411,6 +419,7 @@
                             <i class="fas fa-sync mr-2 text-primary"></i> Composer Update
                         </button>
                     </form>
+                    @endif
                 </div>
             </div>
             @endif

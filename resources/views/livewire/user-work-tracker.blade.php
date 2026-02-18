@@ -1,4 +1,4 @@
-<div class="d-flex align-items-center mr-3">
+<div class="d-flex align-items-center">
     <!-- Live Clock -->
     <div class="mr-3 text-right d-none d-sm-block" wire:ignore>
         <div class="text-xs text-muted text-uppercase font-weight-bold" style="line-height: 1;">Current Time</div>

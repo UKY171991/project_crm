@@ -225,7 +225,7 @@
                         @else
                             <a href="{{ route('login') }}" class="nav-link">Log in</a>
 
-                            @if (Route::has('register'))
+                            @if (Route::has('register') && \App\Models\Setting::get('registration_enabled', '1') == '1')
                                 <a href="{{ route('register') }}" class="btn-fancy text-sm" style="padding: 8px 20px; font-size: 0.9rem;">Register</a>
                             @endif
                         @endauth
@@ -257,7 +257,7 @@
                     <a href="{{ route('login') }}" class="btn-fancy">
                         <i class="fas fa-sign-in-alt me-2"></i> Get Started
                     </a>
-                    @if (Route::has('register'))
+                    @if (Route::has('register') && \App\Models\Setting::get('registration_enabled', '1') == '1')
                     <a href="{{ route('register') }}" class="btn-outline-fancy">
                         <i class="fas fa-user-plus me-2"></i> Sign Up
                     </a>

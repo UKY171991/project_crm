@@ -13,7 +13,7 @@ class AttendanceManager extends Component
     use WithPagination;
     protected $paginationTheme = 'bootstrap';
 
-    public $dateRange = 'today';
+    public $dateRange = 'month';
     public $userId = null;
 
     protected $listeners = ['attendance-updated' => '$refresh'];
