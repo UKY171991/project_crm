@@ -23,11 +23,17 @@ class ScreenshotController extends Controller
             $request->validate([
                 'user_id' => 'required|exists:users,id',
                 'attendance_id' => 'required|exists:attendances,id',
-                'image_data' => 'required|string'
+                'image_data' => 'nullable|string',
+                'image' => 'nullable|string',
+                'captured_at' => 'nullable|date'
             ]);
 
-            // Decode base64 image
-            $imageData = $request->image_data;
+            // Decode base64 image - support both field names
+            $imageData = $request->image_data ?? $request->image;
+            
+            if (!$imageData) {
+                return response()->json(['success' => false, 'message' => 'No image data provided'], 400);
+            }
             
             // Handle different image formats (PNG or JPEG)
             $img = $imageData;
@@ -43,8 +49,26 @@ class ScreenshotController extends Controller
             
             $img = str_replace(' ', '+', $img);
             
-            $fileName = 'ss_' . time() . '_' . $request->user_id . '.' . $extension;
+            // Use captured_at timestamp if provided, otherwise use current time
+            $capturedAt = $request->captured_at ? Carbon::parse($request->captured_at) : Carbon::now();
+            
+            $fileName = 'ss_' . $capturedAt->timestamp . '_' . $request->user_id . '.' . $extension;
             $path = 'screenshots/' . $fileName;
+            
+            // Check for duplicate screenshots (same user, attendance, within 5 seconds)
+            $recentDuplicate = Screenshot::where('user_id', $request->user_id)
+                ->where('attendance_id', $request->attendance_id)
+                ->where('captured_at', '>=', $capturedAt->copy()->subSeconds(5))
+                ->where('captured_at', '<=', $capturedAt->copy()->addSeconds(5))
+                ->first();
+            
+            if ($recentDuplicate) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Duplicate screenshot detected (within 5 seconds)',
+                    'screenshot_id' => $recentDuplicate->id
+                ], 200)->header('Access-Control-Allow-Origin', '*');
+            }
             
             // Save to storage
             \Storage::disk('public')->put($path, base64_decode($img));
@@ -54,7 +78,7 @@ class ScreenshotController extends Controller
                 'user_id' => $request->user_id,
                 'attendance_id' => $request->attendance_id,
                 'path' => $path,
-                'captured_at' => Carbon::now()
+                'captured_at' => $capturedAt
             ]);
 
             // UPDATE ATTENDANCE SYNC
@@ -70,7 +94,8 @@ class ScreenshotController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Screenshot uploaded successfully',
-                'screenshot_id' => $screenshot->id
+                'screenshot_id' => $screenshot->id,
+                'captured_at' => $capturedAt->toIso8601String()
             ], 200)->header('Access-Control-Allow-Origin', '*');
 
         } catch (\Exception $e) {
@@ -169,11 +194,14 @@ class ScreenshotController extends Controller
 
         if (\Auth::attempt($credentials)) {
             $user = \Auth::user();
+            $user->load('role'); // Load role relationship
+            
             return response()->json([
                 'success' => true,
                 'id' => $user->id,
                 'name' => $user->name,
-                'email' => $user->email
+                'email' => $user->email,
+                'role' => $user->role ? $user->role->slug : 'user'
             ])->header('Access-Control-Allow-Origin', '*')
               ->header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
         }
@@ -273,5 +301,196 @@ class ScreenshotController extends Controller
             'success' => false,
             'message' => 'No active session found'
         ])->header('Access-Control-Allow-Origin', '*');
+    }
+
+    public function activityTrack(Request $request)
+    {
+        if ($request->isMethod('options')) {
+            return response('', 200)
+                ->header('Access-Control-Allow-Origin', '*')
+                ->header('Access-Control-Allow-Methods', 'POST, GET, OPTIONS')
+                ->header('Access-Control-Allow-Headers', 'Content-Type, Accept, Authorization, X-Requested-With');
+        }
+
+        try {
+            $request->validate([
+                'user_id' => 'required|exists:users,id',
+                'attendance_id' => 'required|exists:attendances,id',
+                'url' => 'required|string',
+                'title' => 'nullable|string',
+                'tracked_at' => 'nullable|date',
+                'type' => 'nullable|string'
+            ]);
+
+            $trackedAt = $request->tracked_at ? Carbon::parse($request->tracked_at) : Carbon::now();
+
+            // Check for duplicate activity (same URL within 30 seconds)
+            $recentDuplicate = \DB::table('activity_logs')
+                ->where('user_id', $request->user_id)
+                ->where('attendance_id', $request->attendance_id)
+                ->where('url', $request->url)
+                ->where('tracked_at', '>=', $trackedAt->copy()->subSeconds(30))
+                ->where('tracked_at', '<=', $trackedAt->copy()->addSeconds(30))
+                ->first();
+
+            if ($recentDuplicate) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Duplicate activity detected'
+                ], 200)->header('Access-Control-Allow-Origin', '*');
+            }
+
+            // Store activity log
+            \DB::table('activity_logs')->insert([
+                'user_id' => $request->user_id,
+                'attendance_id' => $request->attendance_id,
+                'url' => $request->url,
+                'title' => $request->title ?? 'Unknown',
+                'type' => $request->type ?? 'url',
+                'tracked_at' => $trackedAt,
+                'created_at' => Carbon::now(),
+                'updated_at' => Carbon::now()
+            ]);
+
+            // Update attendance sync
+            $attendance = Attendance::find($request->attendance_id);
+            if ($attendance && !$attendance->clock_out) {
+                $totalSecs = Carbon::parse($attendance->clock_in)->diffInSeconds(Carbon::now());
+                $attendance->update([
+                    'total_seconds' => $totalSecs,
+                    'updated_at' => Carbon::now()
+                ]);
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Activity tracked successfully'
+            ], 200)->header('Access-Control-Allow-Origin', '*');
+
+        } catch (\Exception $e) {
+            \Log::error('Activity tracking failed: ' . $e->getMessage());
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Tracking failed: ' . $e->getMessage()
+            ], 500)->header('Access-Control-Allow-Origin', '*');
+        }
+    }
+
+    public function getProjects(Request $request)
+    {
+        if ($request->isMethod('options')) {
+            return response('', 200)
+                ->header('Access-Control-Allow-Origin', '*')
+                ->header('Access-Control-Allow-Methods', 'POST, GET, OPTIONS')
+                ->header('Access-Control-Allow-Headers', 'Content-Type, Accept, Authorization, X-Requested-With');
+        }
+
+        try {
+            $request->validate([
+                'user_id' => 'required|exists:users,id',
+                'role' => 'nullable|string'
+            ]);
+
+            $user = \App\Models\User::with('role')->find($request->user_id);
+            if (!$user) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'User not found'
+                ], 404)->header('Access-Control-Allow-Origin', '*');
+            }
+
+            $roleSlug = $request->role ?? ($user->role ? $user->role->slug : 'user');
+
+            \Log::info('Fetching projects for user', [
+                'user_id' => $request->user_id,
+                'role_slug' => $roleSlug
+            ]);
+
+            // If master/admin, show all pending/running projects
+            // If regular user, show only their assigned projects
+            $query = \App\Models\Project::with('client')
+                ->whereIn('status', ['Pending', 'Running']);
+
+            if ($roleSlug !== 'master' && $roleSlug !== 'admin') {
+                // Regular user - only their projects
+                $query->whereHas('assignees', function($q) use ($request) {
+                    $q->where('user_id', $request->user_id);
+                });
+            }
+
+            $projects = $query->orderBy('created_at', 'desc')
+                ->limit(20)
+                ->get()
+                ->map(function($project) {
+                    return [
+                        'id' => $project->id,
+                        'name' => $project->title ?? $project->name ?? 'Untitled',
+                        'status' => $project->status,
+                        'client_name' => $project->client->name ?? 'N/A'
+                    ];
+                });
+
+            \Log::info('Projects fetched', [
+                'count' => $projects->count(),
+                'role' => $roleSlug
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'projects' => $projects,
+                'role' => $roleSlug
+            ])->header('Access-Control-Allow-Origin', '*');
+
+        } catch (\Exception $e) {
+            \Log::error('Get projects failed: ' . $e->getMessage());
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to fetch projects: ' . $e->getMessage()
+            ], 500)->header('Access-Control-Allow-Origin', '*');
+        }
+    }
+
+    public function getPendingPayments(Request $request)
+    {
+        if ($request->isMethod('options')) {
+            return response('', 200)
+                ->header('Access-Control-Allow-Origin', '*')
+                ->header('Access-Control-Allow-Methods', 'POST, GET, OPTIONS')
+                ->header('Access-Control-Allow-Headers', 'Content-Type, Accept, Authorization, X-Requested-With');
+        }
+
+        try {
+            // Get pending payments
+            $payments = \App\Models\Payment::with(['project.client'])
+                ->where('status', 'Pending')
+                ->orderBy('payment_date', 'asc')
+                ->limit(10)
+                ->get()
+                ->map(function($payment) {
+                    return [
+                        'id' => $payment->id,
+                        'amount' => number_format($payment->amount, 2),
+                        'currency' => $payment->currency ?? '$',
+                        'project_name' => $payment->project->name ?? 'N/A',
+                        'client_name' => $payment->project->client->name ?? 'N/A',
+                        'payment_date' => $payment->payment_date ? Carbon::parse($payment->payment_date)->format('M d, Y') : 'N/A'
+                    ];
+                });
+
+            return response()->json([
+                'success' => true,
+                'payments' => $payments
+            ])->header('Access-Control-Allow-Origin', '*');
+
+        } catch (\Exception $e) {
+            \Log::error('Get pending payments failed: ' . $e->getMessage());
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to fetch payments: ' . $e->getMessage()
+            ], 500)->header('Access-Control-Allow-Origin', '*');
+        }
     }
 }

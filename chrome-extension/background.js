@@ -1,100 +1,162 @@
-// Background service worker
+// Background service worker - URL/Activity Tracking Only
 let isCapturing = false;
 let userId = null;
 let attendanceId = null;
 let heartbeatInterval = null;
-let crmTabId = null;
+let activityTrackingInterval = null;
+let lastTrackedUrl = null;
 
 const API_BASE = 'https://crm.devloper.space/api';
 
-// Initial state sync
-chrome.storage.local.get(['isCapturing', 'userId', 'attendanceId'], (result) => {
+// Initial state sync - Auto-start on browser open
+chrome.storage.local.get(['isCapturing', 'userId', 'attendanceId', 'wasCapturingBeforeClose'], (result) => {
   isCapturing = result.isCapturing || false;
   userId = result.userId || null;
   attendanceId = result.attendanceId || null;
 
+  // Always show badge based on current state
   if (isCapturing) {
     chrome.action.setBadgeText({ text: 'ON' });
-    chrome.action.setBadgeBackgroundColor({ color: '#F44336' });
-    // Screenshot capture disabled per user request
-    // ensureOffscreenReady();
+    chrome.action.setBadgeBackgroundColor({ color: '#4CAF50' });
+  } else {
+    chrome.action.setBadgeText({ text: 'OFF' });
+    chrome.action.setBadgeBackgroundColor({ color: '#FF0000' });
+  }
+
+  // If user was capturing before browser closed, auto-restart
+  if (result.wasCapturingBeforeClose && userId) {
+    console.log('🔄 Browser reopened - Auto-restarting tracking');
+    
+    chrome.action.setBadgeText({ text: 'WAIT' });
+    chrome.action.setBadgeBackgroundColor({ color: '#FFA500' });
+    
+    // Get or create attendance session
+    fetch(`${API_BASE}/get-active-attendance?user_id=${userId}&auto_start=1`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && data.attendance_id) {
+          attendanceId = data.attendance_id;
+          isCapturing = true;
+          chrome.storage.local.set({ 
+            isCapturing: true,
+            userId, 
+            attendanceId,
+            wasCapturingBeforeClose: true 
+          });
+          
+          chrome.action.setBadgeText({ text: 'ON' });
+          chrome.action.setBadgeBackgroundColor({ color: '#4CAF50' });
+          
+          startHeartbeat();
+          startActivityTracking();
+        }
+      }).catch(err => {
+        console.log('Auto-restart status:', err.message);
+        chrome.action.setBadgeText({ text: 'ERR' });
+        chrome.action.setBadgeBackgroundColor({ color: '#FF0000' });
+      });
+  } else if (isCapturing) {
+    chrome.action.setBadgeText({ text: 'ON' });
+    chrome.action.setBadgeBackgroundColor({ color: '#4CAF50' });
     startHeartbeat();
+    startActivityTracking();
+  } else {
+    chrome.action.setBadgeText({ text: 'OFF' });
+    chrome.action.setBadgeBackgroundColor({ color: '#FF0000' });
+  }
+});
+
+// Keep state in sync
+chrome.storage.onChanged.addListener((changes) => {
+  if (changes.isCapturing) {
+    isCapturing = changes.isCapturing.newValue;
+  }
+  if (changes.userId) {
+    userId = changes.userId.newValue;
+  }
+  if (changes.attendanceId) {
+    attendanceId = changes.attendanceId.newValue;
   }
 });
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message.action === 'ensureOffscreen') {
-    // Screenshot capture disabled
-    sendResponse({ success: true });
-    return true;
-  } else if (message.action === 'startCapture' || message.action === 'crmPageOpened') {
-    if (isCapturing && userId === message.userId && attendanceId === message.attendanceId) {
-      if (sender.tab) crmTabId = sender.tab.id;
+  if (message.action === 'startCapture' || message.action === 'crmPageOpened') {
+    if (message.userId) userId = message.userId;
+    if (message.attendanceId) attendanceId = message.attendanceId;
+
+    if (!attendanceId && userId) {
+      chrome.action.setBadgeText({ text: 'WAIT' });
+      chrome.action.setBadgeBackgroundColor({ color: '#FFA500' });
+      
+      fetch(`${API_BASE}/get-active-attendance?user_id=${userId}&auto_start=1`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.success && data.attendance_id) {
+            attendanceId = data.attendance_id;
+            isCapturing = true;
+            chrome.storage.local.set({ isCapturing: true, userId, attendanceId, wasCapturingBeforeClose: true });
+            chrome.action.setBadgeText({ text: 'ON' });
+            chrome.action.setBadgeBackgroundColor({ color: '#4CAF50' });
+            startHeartbeat();
+            startActivityTracking();
+          } else {
+            chrome.action.setBadgeText({ text: 'ERR' });
+            chrome.action.setBadgeBackgroundColor({ color: '#FF0000' });
+          }
+        }).catch(err => {
+          console.log('Auto-fetch attendance status:', err.message);
+          chrome.action.setBadgeText({ text: 'ERR' });
+          chrome.action.setBadgeBackgroundColor({ color: '#FF0000' });
+        });
+
       sendResponse({ success: true });
-      return true;
+      return false;
     }
 
-    userId = message.userId;
-    attendanceId = message.attendanceId;
-    isCapturing = true;
+    if (userId && attendanceId) {
+      if (!isCapturing) {
+        console.log('🚀 Auto-starting tracking for User:', userId, 'Attendance:', attendanceId);
+        isCapturing = true;
+        chrome.storage.local.set({ isCapturing: true, userId, attendanceId, wasCapturingBeforeClose: true });
+      }
 
-    if (sender.tab) {
-      crmTabId = sender.tab.id;
+      chrome.action.setBadgeText({ text: 'ON' });
+      chrome.action.setBadgeBackgroundColor({ color: '#4CAF50' });
+
+      startHeartbeat();
+      startActivityTracking();
     }
-
-    chrome.storage.local.set({ isCapturing: true, userId, attendanceId });
-    chrome.action.setBadgeText({ text: 'ON' });
-    chrome.action.setBadgeBackgroundColor({ color: '#F44336' });
-
-    // ONLY HEARTBEAT (TIME RECORDING) - SCREENSHOT HELD
-    startHeartbeat();
-    startCaptureLoop();
 
     sendResponse({ success: true });
+    return false;
   } else if (message.action === 'stopCapture') {
-    stopCapturing();
+    stopCapturing(true);
     sendResponse({ success: true });
-  } else if (message.action === 'captureError') {
-    console.error('FATAL Capture Error:', message.error);
-    isCapturing = false;
-    chrome.storage.local.set({ isCapturing: false });
-    chrome.action.setBadgeText({ text: '' });
-    if (heartbeatInterval) clearInterval(heartbeatInterval);
-    chrome.runtime.sendMessage({ action: 'stopOffscreenCapture' }).catch(() => { });
-  } else if (message.action === 'screenshotCaptured') {
-    // uploadScreenshot(message.imageData, message.userId, message.attendanceId);
+    return false;
   }
-  return true;
+  return false;
 });
 
-// Listener for tab closure
-chrome.tabs.onRemoved.addListener((tabId, removeInfo) => {
-  if (tabId === crmTabId) {
-    // Check if there are other CRM tabs open
-    chrome.tabs.query({ url: "https://crm.devloper.space/*" }, (tabs) => {
-      if (tabs && tabs.length > 0) {
-        // Switch to another open CRM tab
-        crmTabId = tabs[0].id;
-        console.log('Switched tracking to another CRM tab:', crmTabId);
-      } else {
-        // No CRM tabs left, stop capturing
-        stopCapturing();
-        crmTabId = null;
+// Listener for tab updates
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+  if (changeInfo.status === 'complete' && tab.url && tab.url.includes('crm.devloper.space')) {
+    chrome.storage.local.get(['userId', 'attendanceId', 'isCapturing'], (res) => {
+      if (res.userId && res.attendanceId) {
+        if (!isCapturing || !res.isCapturing) {
+          console.log('🔄 Tab refresh: Resuming tracking');
+          isCapturing = true;
+          chrome.storage.local.set({ isCapturing: true });
+          startActivityTracking();
+          startHeartbeat();
+        }
       }
     });
   }
 });
 
-
-async function ensureOffscreenReady() {
-  // Disabled to stop screenshots
-  return;
-}
-
 function startHeartbeat() {
   if (heartbeatInterval) clearInterval(heartbeatInterval);
   heartbeatInterval = setInterval(sendHeartbeat, 30000);
-  startCaptureLoop();
 }
 
 async function sendHeartbeat() {
@@ -106,85 +168,89 @@ async function sendHeartbeat() {
   }).catch(() => { });
 }
 
-function stopCapturing() {
+function stopCapturing(isManualStop = false) {
   const uId = userId;
   isCapturing = false;
   if (heartbeatInterval) clearInterval(heartbeatInterval);
-  if (captureInterval) clearInterval(captureInterval);
+  if (activityTrackingInterval) clearInterval(activityTrackingInterval);
 
-  if (uId) {
+  chrome.action.setBadgeText({ text: 'OFF' });
+  chrome.action.setBadgeBackgroundColor({ color: '#FF0000' });
+
+  if (uId && isManualStop) {
     fetch(`${API_BASE}/clock-out`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ user_id: uId })
     }).catch(() => { });
+    
+    chrome.storage.local.set({ 
+      isCapturing: false,
+      wasCapturingBeforeClose: false
+    });
+  } else {
+    chrome.storage.local.set({ 
+      isCapturing: false,
+      wasCapturingBeforeClose: true
+    });
   }
-
-  chrome.storage.local.set({ isCapturing: false });
-  chrome.action.setBadgeText({ text: '' });
-  chrome.runtime.sendMessage({ action: 'stopOffscreenCapture' }).catch(() => { });
-  chrome.offscreen.closeDocument().catch(() => { });
 }
 
-
-let captureInterval = null;
-
-async function uploadScreenshot(imageData, uId, aId) {
-  if (!uId || !aId || !imageData) return;
-
-  // console.log('Uploading screenshot...');
-  fetch(`${API_BASE}/screenshot-upload`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json'
-    },
-    body: JSON.stringify({
-      user_id: uId,
-      attendance_id: aId,
-      image: imageData
-    })
-  }).then(res => res.json())
-    .then(data => console.log('Screenshot uploaded:', data))
-    .catch(err => console.error('Upload failed:', err));
+// Activity tracking - URLs and window titles
+function startActivityTracking() {
+  if (activityTrackingInterval) clearInterval(activityTrackingInterval);
+  
+  trackActivity();
+  activityTrackingInterval = setInterval(trackActivity, 60000);
 }
 
-function startCaptureLoop() {
-  if (captureInterval) clearInterval(captureInterval);
-
-  // Capture immediately for test
-  captureTabIfCrm();
-
-  // Then every 60 seconds
-  captureInterval = setInterval(captureTabIfCrm, 60000);
-}
-
-function captureTabIfCrm() {
+async function trackActivity() {
   if (!isCapturing || !userId || !attendanceId) return;
-
-  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+  
+  try {
+    const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
     if (tabs.length === 0) return;
+    
     const activeTab = tabs[0];
-
-    // console.log('Checking tab for capture:', activeTab.url);
-
-    // Check if we are on the CRM
-    if (activeTab.url && activeTab.url.includes('crm.devloper.space')) {
-      // console.log('Attempting capture of CRM tab...');
-      chrome.tabs.captureVisibleTab(null, { format: 'png' }, (dataUrl) => {
-        if (chrome.runtime.lastError) {
-          console.error('Capture failed:', chrome.runtime.lastError.message);
-          return;
-        }
-        if (dataUrl) {
-          // console.log('Capture successful, uploading...');
-          uploadScreenshot(dataUrl, userId, attendanceId);
-        } else {
-          console.error('Capture result was null');
-        }
-      });
-    } else {
-      // console.log('Not on CRM, skipping capture. Current URL:', activeTab.url);
+    const url = activeTab.url || 'Unknown';
+    const title = activeTab.title || 'Unknown';
+    const timestamp = new Date().toISOString();
+    
+    // Only send if URL changed (avoid duplicates)
+    if (url !== lastTrackedUrl) {
+      lastTrackedUrl = url;
+      
+      fetch(`${API_BASE}/activity-track`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id: userId,
+          attendance_id: attendanceId,
+          url: url,
+          title: title,
+          tracked_at: timestamp,
+          type: 'url'
+        })
+      }).then(res => res.json())
+        .then(data => {
+          if (data.success) {
+            console.log(`✓ Activity tracked: ${title}`);
+            // Update activity count in storage
+            chrome.storage.local.get(['activityCount'], (res) => {
+              const count = (res.activityCount || 0) + 1;
+              const time = new Date().toLocaleTimeString();
+              chrome.storage.local.set({
+                activityCount: count,
+                lastActivity: time
+              });
+            });
+          }
+        })
+        .catch(err => console.log('Activity tracking status:', err.message));
     }
-  });
+  } catch (err) {
+    if (err.message && !err.message.includes('target tab')) {
+      console.log('Activity tracking status:', err.message);
+    }
+  }
 }

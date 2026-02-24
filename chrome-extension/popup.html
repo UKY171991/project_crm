@@ -225,6 +225,77 @@
             padding: 20px;
             color: #666;
         }
+
+        .project-item, .payment-item {
+            padding: 10px;
+            margin-bottom: 8px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            border-left: 3px solid #667eea;
+            font-size: 12px;
+        }
+
+        .project-item.running {
+            border-left-color: #10b981;
+        }
+
+        .project-item.pending {
+            border-left-color: #f59e0b;
+        }
+
+        .payment-item {
+            border-left-color: #dc3545;
+        }
+
+        .project-name {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 4px;
+        }
+
+        .project-status {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .project-status.running {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .project-status.pending {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .project-client {
+            font-size: 11px;
+            color: #666;
+            margin-top: 4px;
+        }
+
+        .payment-amount {
+            font-weight: 700;
+            color: #dc3545;
+            font-size: 14px;
+        }
+
+        .payment-project {
+            font-size: 11px;
+            color: #666;
+            margin-top: 4px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 20px;
+            color: #999;
+            font-size: 12px;
+        }
     </style>
 </head>
 
@@ -275,20 +346,35 @@
             </div>
         </div>
 
-        <!-- Statistics -->
         <div id="statsSection" class="stats" style="display: none;">
             <h3>📊 Statistics</h3>
             <div class="stat-item">
-                <span class="stat-label">Screenshots Taken:</span>
-                <span class="stat-value" id="screenshotCount">0</span>
+                <span class="stat-label">Activities Tracked:</span>
+                <span class="stat-value" id="activityCount">0</span>
             </div>
             <div class="stat-item">
-                <span class="stat-label">Last Capture:</span>
-                <span class="stat-value" id="lastCapture">Never</span>
+                <span class="stat-label">Last Activity:</span>
+                <span class="stat-value" id="lastActivity">Never</span>
             </div>
             <div class="stat-item">
                 <span class="stat-label">Status:</span>
                 <span class="stat-value" id="captureStatus">Idle</span>
+            </div>
+        </div>
+
+        <!-- Projects Section -->
+        <div id="projectsSection" class="stats" style="display: none;">
+            <h3>📋 My Projects</h3>
+            <div id="projectsList" style="max-height: 200px; overflow-y: auto;">
+                <div class="loading">Loading projects...</div>
+            </div>
+        </div>
+
+        <!-- Payments Section (Master User Only) -->
+        <div id="paymentsSection" class="stats" style="display: none;">
+            <h3>💰 Pending Payments</h3>
+            <div id="paymentsList" style="max-height: 200px; overflow-y: auto;">
+                <div class="loading">Loading payments...</div>
             </div>
         </div>
 
@@ -329,11 +415,11 @@
             </button>
         </div>
 
-        <button id="stopBtn" class="btn-stop" style="display: none;">⏹️ Stop Capturing</button>
+        <button id="stopBtn" class="btn-stop" style="display: none;">⏹️ Stop Tracking</button>
 
         <div class="info">
-            📸 Captures entire screen every 60 seconds<br>
-            🔒 Permission granted once, persists across refreshes<br>
+            📊 Tracks visited URLs and activities every 60 seconds<br>
+            ⏱️ Automatic time tracking<br>
             💾 Automatically uploads to CRM
         </div>
     </div>

@@ -1,19 +1,19 @@
 {
     "manifest_version": 3,
-    "name": "CRM Work Tracker - Screenshot Monitor",
-    "version": "1.0.0",
-    "description": "Automatically captures screenshots for work tracking in CRM",
+    "name": "CRM Work Tracker - Activity Monitor",
+    "version": "2.0.0",
+    "description": "Automatically tracks time and activities for work tracking in CRM",
     "permissions": [
-        "desktopCapture",
         "storage",
         "tabs",
         "activeTab",
         "notifications",
-        "offscreen",
-        "alarms"
+        "alarms",
+        "webNavigation"
     ],
     "host_permissions": [
-        "https://crm.devloper.space/*"
+        "https://crm.devloper.space/*",
+        "<all_urls>"
     ],
     "background": {
         "service_worker": "background.js"

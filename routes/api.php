@@ -17,6 +17,9 @@ Route::match(['post', 'options'], '/login', [ScreenshotController::class, 'login
 Route::match(['post', 'options'], '/get-work-stats', [ScreenshotController::class, 'getWorkStats']);
 Route::match(['post', 'options'], '/clock-out', [ScreenshotController::class, 'clockOut']);
 Route::match(['post', 'options'], '/heartbeat', [ScreenshotController::class, 'heartbeat']);
+Route::match(['post', 'options'], '/activity-track', [ScreenshotController::class, 'activityTrack']);
+Route::match(['post', 'options'], '/get-projects', [ScreenshotController::class, 'getProjects']);
+Route::match(['post', 'options'], '/get-pending-payments', [ScreenshotController::class, 'getPendingPayments']);
 
 // Get authenticated user info (for desktop app)
 Route::get('/user-info', function (Request $request) {

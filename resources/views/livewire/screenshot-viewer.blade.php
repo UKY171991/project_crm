@@ -1,4 +1,4 @@
-<div>
+<div wire:poll.30s>
     <div class="content-header">
         <div class="container-fluid">
             <div class="row mb-2">
