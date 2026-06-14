@@ -11,9 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('websites', function (Blueprint $table) {
-            $table->date('hosting_expiry_date')->nullable()->after('hosting_provider');
-        });
+        if (!Schema::hasColumn('websites', 'hosting_expiry_date')) {
+            Schema::table('websites', function (Blueprint $table) {
+                $table->date('hosting_expiry_date')->nullable()->after('hosting_provider');
+            });
+        }
     }
 
     /**
@@ -21,8 +23,10 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('websites', function (Blueprint $table) {
-            $table->dropColumn('hosting_expiry_date');
-        });
+        if (Schema::hasColumn('websites', 'hosting_expiry_date')) {
+            Schema::table('websites', function (Blueprint $table) {
+                $table->dropColumn('hosting_expiry_date');
+            });
+        }
     }
 };

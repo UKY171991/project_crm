@@ -11,9 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('client_feedback', function (Blueprint $table) {
-            $table->dateTime('next_schedule')->nullable()->after('status');
-        });
+        if (!Schema::hasColumn('client_feedback', 'next_schedule')) {
+            Schema::table('client_feedback', function (Blueprint $table) {
+                $table->dateTime('next_schedule')->nullable()->after('status');
+            });
+        }
     }
 
     /**
@@ -21,8 +23,10 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('client_feedback', function (Blueprint $table) {
-            $table->dropColumn('next_schedule');
-        });
+        if (Schema::hasColumn('client_feedback', 'next_schedule')) {
+            Schema::table('client_feedback', function (Blueprint $table) {
+                $table->dropColumn('next_schedule');
+            });
+        }
     }
 };

@@ -11,9 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('loans', function (Blueprint $table) {
-            $table->foreignId('parent_id')->nullable()->after('id')->constrained('loans')->onDelete('cascade');
-        });
+        if (!Schema::hasColumn('loans', 'parent_id')) {
+            Schema::table('loans', function (Blueprint $table) {
+                $table->foreignId('parent_id')->nullable()->after('id')->constrained('loans')->onDelete('cascade');
+            });
+        }
     }
 
     /**
@@ -21,8 +23,10 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('loans', function (Blueprint $table) {
-            $table->dropConstrainedForeignId('parent_id');
-        });
+        if (Schema::hasColumn('loans', 'parent_id')) {
+            Schema::table('loans', function (Blueprint $table) {
+                $table->dropConstrainedForeignId('parent_id');
+            });
+        }
     }
 };

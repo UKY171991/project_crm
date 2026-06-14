@@ -12,9 +12,15 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('projects', function (Blueprint $table) {
-            $table->string('reminder_frequency')->default('none')->after('status'); // none, daily, weekly, monthly
-            $table->timestamp('last_reminder_at')->nullable()->after('reminder_frequency');
-            $table->boolean('reminder_enabled')->default(false)->after('last_reminder_at');
+            if (!Schema::hasColumn('projects', 'reminder_frequency')) {
+                $table->string('reminder_frequency')->default('none')->after('status');
+            }
+            if (!Schema::hasColumn('projects', 'last_reminder_at')) {
+                $table->timestamp('last_reminder_at')->nullable()->after('reminder_frequency');
+            }
+            if (!Schema::hasColumn('projects', 'reminder_enabled')) {
+                $table->boolean('reminder_enabled')->default(false)->after('last_reminder_at');
+            }
         });
     }
 
@@ -24,7 +30,19 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('projects', function (Blueprint $table) {
-            $table->dropColumn(['reminder_frequency', 'last_reminder_at', 'reminder_enabled']);
+            $columnsToDrop = [];
+            if (Schema::hasColumn('projects', 'reminder_frequency')) {
+                $columnsToDrop[] = 'reminder_frequency';
+            }
+            if (Schema::hasColumn('projects', 'last_reminder_at')) {
+                $columnsToDrop[] = 'last_reminder_at';
+            }
+            if (Schema::hasColumn('projects', 'reminder_enabled')) {
+                $columnsToDrop[] = 'reminder_enabled';
+            }
+            if (!empty($columnsToDrop)) {
+                $table->dropColumn($columnsToDrop);
+            }
         });
     }
 };

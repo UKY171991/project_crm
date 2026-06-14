@@ -11,18 +11,20 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('website_renewals', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('website_id')->constrained()->onDelete('cascade');
-            $table->string('type'); // domain, hosting, ssl, other
-            $table->date('renewal_date');
-            $table->date('new_expiry_date');
-            $table->decimal('amount', 10, 2);
-            $table->string('currency')->default('INR');
-            $table->string('payment_status')->default('Paid'); // Paid, Pending, Partially Paid
-            $table->text('notes')->nullable();
-            $table->timestamps();
-        });
+        if (!Schema::hasTable('website_renewals')) {
+            Schema::create('website_renewals', function (Blueprint $table) {
+                $table->id();
+                $table->foreignId('website_id')->constrained()->onDelete('cascade');
+                $table->string('type'); // domain, hosting, ssl, other
+                $table->date('renewal_date');
+                $table->date('new_expiry_date');
+                $table->decimal('amount', 10, 2);
+                $table->string('currency')->default('INR');
+                $table->string('payment_status')->default('Paid'); // Paid, Pending, Partially Paid
+                $table->text('notes')->nullable();
+                $table->timestamps();
+            });
+        }
     }
 
     /**

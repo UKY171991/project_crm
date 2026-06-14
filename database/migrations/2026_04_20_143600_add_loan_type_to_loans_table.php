@@ -11,9 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('loans', function (Blueprint $table) {
-            $table->string('loan_type')->nullable()->after('type');
-        });
+        if (!Schema::hasColumn('loans', 'loan_type')) {
+            Schema::table('loans', function (Blueprint $table) {
+                $table->string('loan_type')->nullable()->after('type');
+            });
+        }
     }
 
     /**
@@ -21,8 +23,10 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('loans', function (Blueprint $table) {
-            $table->dropColumn('loan_type');
-        });
+        if (Schema::hasColumn('loans', 'loan_type')) {
+            Schema::table('loans', function (Blueprint $table) {
+                $table->dropColumn('loan_type');
+            });
+        }
     }
 };

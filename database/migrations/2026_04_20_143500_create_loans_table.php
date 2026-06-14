@@ -11,18 +11,20 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('loans', function (Blueprint $table) {
-            $table->id();
-            $table->uuid('uuid')->unique();
-            $table->foreignId('user_id')->constrained()->onDelete('cascade');
-            $table->decimal('amount', 12, 2);
-            $table->string('type')->default('loan'); // loan, repayment
-            $table->date('loan_date');
-            $table->text('description')->nullable();
-            $table->foreignId('created_by')->constrained('users');
-            $table->timestamps();
-            $table->softDeletes();
-        });
+        if (!Schema::hasTable('loans')) {
+            Schema::create('loans', function (Blueprint $table) {
+                $table->id();
+                $table->uuid('uuid')->unique();
+                $table->foreignId('user_id')->constrained()->onDelete('cascade');
+                $table->decimal('amount', 12, 2);
+                $table->string('type')->default('loan'); // loan, repayment
+                $table->date('loan_date');
+                $table->text('description')->nullable();
+                $table->foreignId('created_by')->constrained('users');
+                $table->timestamps();
+                $table->softDeletes();
+            });
+        }
     }
 
     /**
