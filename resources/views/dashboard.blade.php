@@ -27,229 +27,291 @@
         </div>
     </x-slot>
 
-    <!-- Small boxes (Stat box) -->
+
+
+    <!-- Metric Cards Grid -->
     <div class="row">
         <div class="col-lg col-md-4 col-6">
-            <!-- small box -->
-            <div class="small-box bg-gradient-warning-custom shadow-sm">
-                <div class="inner">
-                    <h3>{{ $stats['pending_projects'] }}</h3>
-                    <p>Pending Projects</p>
+            <a href="{{ route('projects.index') }}" class="text-decoration-none">
+                <div class="metric-card">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="value">{{ $stats['pending_projects'] }}</div>
+                            <div class="label">Pending Projects</div>
+                        </div>
+                        <div class="icon-wrapper icon-warning">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                    </div>
                 </div>
-                <div class="icon">
-                    <i class="fas fa-clock"></i>
-                </div>
-                <a href="{{ route('projects.index') }}" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
-            </div>
+            </a>
         </div>
         <div class="col-lg col-md-4 col-6">
-            <!-- small box -->
-            <div class="small-box bg-gradient-success-custom shadow-sm">
-                <div class="inner">
-                    <h3>{{ $stats['running_projects'] }}</h3>
-                    <p>Running Projects</p>
+            <a href="{{ route('projects.index') }}" class="text-decoration-none">
+                <div class="metric-card">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="value">{{ $stats['running_projects'] }}</div>
+                            <div class="label">Running Projects</div>
+                        </div>
+                        <div class="icon-wrapper icon-success">
+                            <i class="fas fa-play-circle"></i>
+                        </div>
+                    </div>
                 </div>
-                <div class="icon">
-                    <i class="fas fa-play-circle"></i>
-                </div>
-                <a href="{{ route('projects.index') }}" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
-            </div>
+            </a>
         </div>
         <div class="col-lg col-md-4 col-6">
-            <!-- small box -->
-            <div class="small-box bg-gradient-info-custom shadow-sm">
-                <div class="inner">
-                    <h3>{{ $stats['completed_projects'] }}</h3>
-                    <p>Completed Tasks</p>
+            <a href="{{ route('projects.index') }}" class="text-decoration-none">
+                <div class="metric-card">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="value">{{ $stats['completed_projects'] }}</div>
+                            <div class="label">Completed Tasks</div>
+                        </div>
+                        <div class="icon-wrapper icon-info">
+                            <i class="fas fa-check-double"></i>
+                        </div>
+                    </div>
                 </div>
-                <div class="icon">
-                    <i class="fas fa-check-double"></i>
-                </div>
-                <a href="{{ route('projects.index') }}" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
-            </div>
+            </a>
         </div>
         <div class="col-lg col-md-4 col-6">
-            <!-- small box -->
-            <div class="small-box bg-gradient-danger-custom shadow-sm">
-                <div class="inner">
-                    <h3>{{ $stats['pending_payment_projects'] }}</h3>
-                    <p>Pending Payment Projects</p>
+            <a href="{{ route('projects.index') }}" class="text-decoration-none">
+                <div class="metric-card">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="value">{{ $stats['pending_payment_projects'] }}</div>
+                            <div class="label">Pending Payment</div>
+                        </div>
+                        <div class="icon-wrapper icon-danger">
+                            <i class="fas fa-money-bill-wave"></i>
+                        </div>
+                    </div>
                 </div>
-                <div class="icon">
-                    <i class="fas fa-money-bill-wave"></i>
-                </div>
-                <a href="{{ route('projects.index') }}" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
-            </div>
+            </a>
         </div>
         <div class="col-lg col-md-4 col-6">
-            <!-- small box -->
-            <div class="small-box bg-gradient-secondary-custom shadow-sm">
-                <div class="inner">
-                    <h3>{{ $stats['canceled_projects'] }}</h3>
-                    <p>Canceled Projects</p>
+            <a href="{{ route('projects.index') }}" class="text-decoration-none">
+                <div class="metric-card">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="value">{{ $stats['canceled_projects'] }}</div>
+                            <div class="label">Canceled Projects</div>
+                        </div>
+                        <div class="icon-wrapper icon-secondary">
+                            <i class="fas fa-times-circle"></i>
+                        </div>
+                    </div>
                 </div>
-                <div class="icon">
-                    <i class="fas fa-times-circle"></i>
-                </div>
-                <a href="{{ route('projects.index') }}" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
-            </div>
+            </a>
         </div>
     </div>
-    <!-- /.row -->
 
     @if(!auth()->user()->hasRole('client'))
     <div class="row">
-
         @if(auth()->user()->hasRole('master') || auth()->user()->hasRole('admin'))
-        <div class="col-lg col-md-4 col-6">
-            <!-- small box -->
-            <div class="small-box bg-gradient-primary-custom shadow-sm">
-                <div class="inner">
-                    <h3>{{ $stats['total_clients'] }}</h3>
-                    <p>Total Clients</p>
+        <div class="col-lg-4 col-md-4 col-12">
+            <a href="{{ route('clients.index') }}" class="text-decoration-none">
+                <div class="metric-card">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="value">{{ $stats['total_clients'] }}</div>
+                            <div class="label">Total Clients</div>
+                        </div>
+                        <div class="icon-wrapper icon-primary">
+                            <i class="fas fa-user-tie"></i>
+                        </div>
+                    </div>
                 </div>
-                <div class="icon">
-                    <i class="fas fa-user-tie"></i>
-                </div>
-                <a href="{{ route('clients.index') }}" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
-            </div>
+            </a>
         </div>
-        <div class="col-lg col-md-4 col-6">
-            <!-- small box -->
-            <div class="small-box bg-gradient-info-custom shadow-sm">
-                <div class="inner">
-                    <h3>{{ $stats['total_non_clients'] }}</h3>
-                    <p>Non-Clients / Leads</p>
+        <div class="col-lg-4 col-md-4 col-12">
+            <a href="{{ route('clients.non-clients') }}" class="text-decoration-none">
+                <div class="metric-card">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="value">{{ $stats['total_non_clients'] }}</div>
+                            <div class="label">Non-Clients / Leads</div>
+                        </div>
+                        <div class="icon-wrapper icon-info">
+                            <i class="fas fa-user-friends"></i>
+                        </div>
+                    </div>
                 </div>
-                <div class="icon">
-                    <i class="fas fa-user-friends"></i>
-                </div>
-                <a href="{{ route('clients.non-clients') }}" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
-            </div>
+            </a>
         </div>
-        <div class="col-lg col-md-4 col-6">
-            <!-- small box -->
-            <div class="small-box bg-gradient-teal-custom shadow-sm">
-                <div class="inner">
-                    <h3>{{ $stats['total_users'] }}</h3>
-                    <p>Team Members</p>
+        <div class="col-lg-4 col-md-4 col-12">
+            <a href="{{ route('users.index') }}" class="text-decoration-none">
+                <div class="metric-card">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="value">{{ $stats['total_users'] }}</div>
+                            <div class="label">Team Members</div>
+                        </div>
+                        <div class="icon-wrapper icon-teal">
+                            <i class="fas fa-users"></i>
+                        </div>
+                    </div>
                 </div>
-                <div class="icon">
-                    <i class="fas fa-users"></i>
-                </div>
-                <a href="{{ route('users.index') }}" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
-            </div>
+            </a>
         </div>
         @endif
     </div>
     @endif
 
     @if(!auth()->user()->hasRole('user'))
-    <h5 class="mb-3 mt-4 text-muted font-weight-bold"><i class="fas fa-calendar-alt mr-1"></i> Financial Summary ({{ $selectedMonth ? date('F', mktime(0, 0, 0, $selectedMonth, 10)) : 'All Months' }} {{ $selectedYear }})</h5>
+    <h5 class="mb-3 mt-3 text-muted font-weight-bold dashboard-section-title">
+        <i class="fas fa-calendar-alt mr-1"></i> Financial Summary ({{ $selectedMonth ? date('F', mktime(0, 0, 0, $selectedMonth, 10)) : 'All Months' }} {{ $selectedYear }})
+    </h5>
     <div class="row">
         <div class="col-lg col-md-4 col-6">
-            <div class="small-box bg-gradient-olive-custom shadow-sm">
-                <div class="inner">
-                    <h3 style="font-size: 1.1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{{ $stats['total_revenue'] }}">{{ $stats['total_revenue'] }}</h3>
-                    <p>Total Income</p>
+            <a href="{{ route('payments.index') }}" class="text-decoration-none">
+                <div class="metric-card">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="value">{{ $stats['total_revenue'] }}</div>
+                            <div class="label">Total Income</div>
+                        </div>
+                        <div class="icon-wrapper icon-success">
+                            <i class="fas fa-money-bill-wave"></i>
+                        </div>
+                    </div>
                 </div>
-                <div class="icon"><i class="fas fa-money-bill-wave"></i></div>
-                <a href="{{ route('payments.index') }}" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
+            </a>
+        </div>
+        <div class="col-lg col-md-4 col-6">
+            <a href="{{ route('expenses.index') }}" class="text-decoration-none">
+                <div class="metric-card">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="value">{{ $stats['total_expense'] }}</div>
+                            <div class="label">Total Expenses</div>
+                        </div>
+                        <div class="icon-wrapper icon-danger">
+                            <i class="fas fa-shopping-cart"></i>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+        <div class="col-lg col-md-4 col-6">
+            <div class="metric-card">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="value">{{ $stats['total_profit'] }}</div>
+                        <div class="label">Net Profit</div>
+                    </div>
+                    <div class="icon-wrapper icon-primary">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                </div>
             </div>
         </div>
         <div class="col-lg col-md-4 col-6">
-            <div class="small-box bg-gradient-maroon-custom shadow-sm">
-                <div class="inner">
-                    <h3 style="font-size: 1.1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{{ $stats['total_expense'] }}">{{ $stats['total_expense'] }}</h3>
-                    <p>Total Expenses</p>
+            <div class="metric-card">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="value">{{ $stats['total_pending'] }}</div>
+                        <div class="label">Pending Payment</div>
+                    </div>
+                    <div class="icon-wrapper icon-warning">
+                        <i class="fas fa-hourglass-half"></i>
+                    </div>
                 </div>
-                <div class="icon"><i class="fas fa-shopping-cart"></i></div>
-                <a href="{{ route('expenses.index') }}" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
             </div>
         </div>
         <div class="col-lg col-md-4 col-6">
-            <div class="small-box bg-gradient-purple-custom shadow-sm">
-                <div class="inner">
-                    <h3 style="font-size: 1.1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{{ $stats['total_profit'] }}">{{ $stats['total_profit'] }}</h3>
-                    <p>Total Net Profit</p>
+            <a href="{{ route('expenses.index') }}" class="text-decoration-none">
+                <div class="metric-card">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="value">{{ $stats['total_pending_expense'] }}</div>
+                            <div class="label">Pending Expense</div>
+                        </div>
+                        <div class="icon-wrapper icon-orange">
+                            <i class="fas fa-file-invoice-dollar"></i>
+                        </div>
+                    </div>
                 </div>
-                <div class="icon"><i class="fas fa-chart-line"></i></div>
-                <div class="small-box-footer" style="min-height: 30px;">&nbsp;</div>
-            </div>
-        </div>
-        <div class="col-lg col-md-4 col-6">
-            <div class="small-box bg-gradient-danger-custom shadow-sm">
-                <div class="inner">
-                    <h3 style="font-size: 1.1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{{ $stats['total_pending'] }}">{{ $stats['total_pending'] }}</h3>
-                    <p>Pending Payment</p>
-                </div>
-                <div class="icon"><i class="fas fa-hourglass-half"></i></div>
-                <div class="small-box-footer" style="min-height: 30px;">&nbsp;</div>
-            </div>
-        </div>
-        <div class="col-lg col-md-4 col-6">
-            <div class="small-box bg-gradient-orange-custom shadow-sm">
-                <div class="inner">
-                    <h3 style="font-size: 1.1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{{ $stats['total_pending_expense'] }}">{{ $stats['total_pending_expense'] }}</h3>
-                    <p>Pending Expense</p>
-                </div>
-                <div class="icon"><i class="fas fa-file-invoice-dollar"></i></div>
-                <a href="{{ route('expenses.index') }}" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
-            </div>
+            </a>
         </div>
     </div>
 
-    <h5 class="mb-3 mt-4 text-muted font-weight-bold"><i class="fas fa-infinity mr-1"></i> Financial Summary (All Time)</h5>
+    <h5 class="mb-3 mt-3 text-muted font-weight-bold dashboard-section-title">
+        <i class="fas fa-infinity mr-1"></i> Financial Summary (All Time)
+    </h5>
     <div class="row">
         <div class="col-lg col-md-4 col-6">
-            <div class="small-box bg-gradient-olive-custom shadow-sm">
-                <div class="inner">
-                    <h3 style="font-size: 1.1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{{ $allTimeStats['total_revenue'] }}">{{ $allTimeStats['total_revenue'] }}</h3>
-                    <p>Total Income</p>
+            <a href="{{ route('payments.index') }}" class="text-decoration-none">
+                <div class="metric-card">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="value">{{ $allTimeStats['total_revenue'] }}</div>
+                            <div class="label">Total Income</div>
+                        </div>
+                        <div class="icon-wrapper icon-success">
+                            <i class="fas fa-money-bill-wave"></i>
+                        </div>
+                    </div>
                 </div>
-                <div class="icon"><i class="fas fa-money-bill-wave"></i></div>
-                <a href="{{ route('payments.index') }}" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
+            </a>
+        </div>
+        <div class="col-lg col-md-4 col-6">
+            <a href="{{ route('expenses.index') }}" class="text-decoration-none">
+                <div class="metric-card">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="value">{{ $allTimeStats['total_expense'] }}</div>
+                            <div class="label">Total Expenses</div>
+                        </div>
+                        <div class="icon-wrapper icon-danger">
+                            <i class="fas fa-shopping-cart"></i>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+        <div class="col-lg col-md-4 col-6">
+            <div class="metric-card">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="value">{{ $allTimeStats['total_profit'] }}</div>
+                        <div class="label">Net Profit</div>
+                    </div>
+                    <div class="icon-wrapper icon-primary">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                </div>
             </div>
         </div>
         <div class="col-lg col-md-4 col-6">
-            <div class="small-box bg-gradient-maroon-custom shadow-sm">
-                <div class="inner">
-                    <h3 style="font-size: 1.1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{{ $allTimeStats['total_expense'] }}">{{ $allTimeStats['total_expense'] }}</h3>
-                    <p>Total Expenses</p>
+            <div class="metric-card">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="value">{{ $allTimeStats['total_pending'] }}</div>
+                        <div class="label">Pending Payment</div>
+                    </div>
+                    <div class="icon-wrapper icon-warning">
+                        <i class="fas fa-hourglass-half"></i>
+                    </div>
                 </div>
-                <div class="icon"><i class="fas fa-shopping-cart"></i></div>
-                <a href="{{ route('expenses.index') }}" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
             </div>
         </div>
         <div class="col-lg col-md-4 col-6">
-            <div class="small-box bg-gradient-purple-custom shadow-sm">
-                <div class="inner">
-                    <h3 style="font-size: 1.1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{{ $allTimeStats['total_profit'] }}">{{ $allTimeStats['total_profit'] }}</h3>
-                    <p>Total Net Profit</p>
+            <a href="{{ route('expenses.index') }}" class="text-decoration-none">
+                <div class="metric-card">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="value">{{ $allTimeStats['total_pending_expense'] }}</div>
+                            <div class="label">Pending Expense</div>
+                        </div>
+                        <div class="icon-wrapper icon-orange">
+                            <i class="fas fa-file-invoice-dollar"></i>
+                        </div>
+                    </div>
                 </div>
-                <div class="icon"><i class="fas fa-chart-line"></i></div>
-                <div class="small-box-footer" style="min-height: 30px;">&nbsp;</div>
-            </div>
-        </div>
-        <div class="col-lg col-md-4 col-6">
-            <div class="small-box bg-gradient-danger-custom shadow-sm">
-                <div class="inner">
-                    <h3 style="font-size: 1.1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{{ $allTimeStats['total_pending'] }}">{{ $allTimeStats['total_pending'] }}</h3>
-                    <p>Pending Payment</p>
-                </div>
-                <div class="icon"><i class="fas fa-hourglass-half"></i></div>
-                <div class="small-box-footer" style="min-height: 30px;">&nbsp;</div>
-            </div>
-        </div>
-        <div class="col-lg col-md-4 col-6">
-            <div class="small-box bg-gradient-orange-custom shadow-sm">
-                <div class="inner">
-                    <h3 style="font-size: 1.1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{{ $allTimeStats['total_pending_expense'] }}">{{ $allTimeStats['total_pending_expense'] }}</h3>
-                    <p>Pending Expense</p>
-                </div>
-                <div class="icon"><i class="fas fa-file-invoice-dollar"></i></div>
-                <a href="{{ route('expenses.index') }}" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
-            </div>
+            </a>
         </div>
     </div>
     @endif

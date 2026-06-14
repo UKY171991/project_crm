@@ -18,96 +18,9 @@
   <!-- Theme style -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/admin-lte@3.2/dist/css/adminlte.min.css">
   
+  <link rel="stylesheet" href="{{ asset('css/custom.css') }}">
   @stack('styles')
   @livewireStyles
-  <style>
-    /* Fancy Layout Enhancements */
-    body { font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f6f9; }
-    
-    /* Sidebar */
-    .fancy-sidebar {
-        background: linear-gradient(180deg, #1e1e2d 0%, #151521 100%) !important;
-        box-shadow: 4px 0 15px rgba(0,0,0,0.05) !important;
-    }
-    .fancy-sidebar .brand-link {
-        border-bottom: 1px solid rgba(255,255,255,0.05) !important;
-        padding: 1.2rem 0.5rem;
-    }
-    .fancy-sidebar .nav-sidebar .nav-item .nav-link {
-        transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-        border-radius: 8px;
-        margin: 2px 12px;
-        padding: 10px 15px;
-    }
-    .fancy-sidebar .nav-sidebar .nav-item .nav-link:hover {
-        background: rgba(255,255,255,0.05);
-        transform: translateX(4px);
-    }
-    .fancy-sidebar .nav-sidebar .nav-item .nav-link.active {
-        background: linear-gradient(135deg, #3699ff 0%, #187de4 100%) !important;
-        box-shadow: 0 4px 10px rgba(54, 153, 255, 0.3) !important;
-        color: #fff !important;
-    }
-    .fancy-sidebar .nav-header {
-        letter-spacing: 1px;
-        opacity: 0.6;
-        font-size: 0.75rem;
-    }
-
-    /* Cards & Boxes */
-    .small-box {
-        border-radius: 12px !important;
-        overflow: hidden;
-        transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-        border: none !important;
-        position: relative;
-        z-index: 1;
-    }
-    .small-box::before {
-        content: '';
-        position: absolute;
-        top: 0; left: 0; right: 0; bottom: 0;
-        background: linear-gradient(45deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0) 100%);
-        z-index: -1;
-    }
-    .small-box:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 12px 20px rgba(0,0,0,0.1) !important;
-    }
-    .small-box .icon > i {
-        transition: all 0.3s ease;
-    }
-    .small-box:hover .icon > i {
-        transform: scale(1.1) rotate(5deg);
-    }
-    
-    .card {
-        border-radius: 12px !important;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.03) !important;
-        border: none !important;
-        transition: all 0.3s ease;
-    }
-    .card:hover {
-        box-shadow: 0 8px 25px rgba(0,0,0,0.06) !important;
-    }
-    .card-header {
-        border-bottom: 1px solid rgba(0,0,0,0.03) !important;
-        background-color: transparent !important;
-    }
-
-    /* Gradients */
-    .bg-gradient-warning-custom { background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%) !important; color: #fff; }
-    .bg-gradient-success-custom { background: linear-gradient(135deg, #28a745 0%, #20c997 100%) !important; color: #fff; }
-    .bg-gradient-info-custom { background: linear-gradient(135deg, #17a2b8 0%, #3699ff 100%) !important; color: #fff; }
-    .bg-gradient-danger-custom { background: linear-gradient(135deg, #f64e60 0%, #dc3545 100%) !important; color: #fff; }
-    .bg-gradient-secondary-custom { background: linear-gradient(135deg, #6c757d 0%, #495057 100%) !important; color: #fff; }
-    .bg-gradient-primary-custom { background: linear-gradient(135deg, #6610f2 0%, #6f42c1 100%) !important; color: #fff; }
-    .bg-gradient-teal-custom { background: linear-gradient(135deg, #20c997 0%, #17a2b8 100%) !important; color: #fff; }
-    .bg-gradient-olive-custom { background: linear-gradient(135deg, #4caf50 0%, #8bc34a 100%) !important; color: #fff; }
-    .bg-gradient-maroon-custom { background: linear-gradient(135deg, #d81b60 0%, #e91e63 100%) !important; color: #fff; }
-    .bg-gradient-purple-custom { background: linear-gradient(135deg, #6f42c1 0%, #e83e8c 100%) !important; color: #fff; }
-    .bg-gradient-orange-custom { background: linear-gradient(135deg, #fd7e14 0%, #ff9800 100%) !important; color: #fff; }
-  </style>
 </head>
 <body class="hold-transition sidebar-mini">
 <!-- Site wrapper -->
@@ -298,15 +211,15 @@
     @endphp
 
     <!-- Marquee Banner for Today's Date and Festival/Holiday -->
-    <div class="container-fluid pt-2">
+    <div class="container-fluid marquee-container">
       @if($layoutFestival)
-          <div class="alert alert-warning p-2 mb-2 shadow-sm border-warning" style="overflow: hidden; border-radius: 8px;">
+          <div class="alert alert-warning p-2 mb-2 shadow-sm border-warning marquee-alert">
               <marquee behavior="scroll" direction="left" scrollamount="5" class="font-weight-bold mb-0">
                   <i class="fas fa-gift text-danger mr-2"></i> Today is {{ $layoutDateString }} | <span class="text-danger font-weight-bold">Today's Festival/Holiday: {{ $layoutFestival }}</span> 🎉
               </marquee>
           </div>
       @else
-          <div class="alert alert-warning p-2 mb-2 shadow-sm border-warning" style="overflow: hidden; border-radius: 8px;">
+          <div class="alert alert-warning p-2 mb-2 shadow-sm border-warning marquee-alert">
               <marquee behavior="scroll" direction="left" scrollamount="5" class="font-weight-bold mb-0 text-dark">
                   <i class="fas fa-calendar-day text-primary mr-2"></i> Today is {{ $layoutDateString }} | No festival scheduled for today. Have a wonderful and productive day!
               </marquee>
