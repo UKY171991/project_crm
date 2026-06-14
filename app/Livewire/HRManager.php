@@ -87,49 +87,71 @@ class HRManager extends Component
 
     public function fetchNextYearHolidays()
     {
-        $nextYear = (int)date('Y') + 1;
-        try {
-            $response = Http::withoutVerifying()->get("https://jayantur13.github.io/calendar-bharat/calendar/{$nextYear}.json");
-            if ($response->successful()) {
-                $data = $response->json();
-                if (isset($data[$nextYear]) && is_array($data[$nextYear])) {
-                    $count = 0;
-                    foreach ($data[$nextYear] as $month => $days) {
-                        if (is_array($days)) {
-                            foreach ($days as $dateStr => $details) {
-                                try {
-                                    $parsedDate = Carbon::parse($dateStr);
-                                    
-                                    $type = 'Festival';
-                                    if (isset($details['type'])) {
-                                        if (stripos($details['type'], 'Government') !== false) {
-                                            $type = 'Regular';
-                                        }
-                                    }
+        $startYear = (int)date('Y');
+        $endYear = $startYear + 10;
+        
+        $fetchedYears = [];
+        $skippedYears = [];
+        $totalCount = 0;
 
-                                    Holiday::updateOrCreate(
-                                        ['date' => $parsedDate->format('Y-m-d')],
-                                        [
-                                            'name' => $details['event'] ?? 'Holiday',
-                                            'type' => $type,
-                                        ]
-                                    );
-                                    $count++;
-                                } catch (\Exception $ex) {
-                                    // Skip item
+        for ($year = $startYear; $year <= $endYear; $year++) {
+            try {
+                $response = Http::withoutVerifying()->get("https://jayantur13.github.io/calendar-bharat/calendar/{$year}.json");
+                if ($response->successful()) {
+                    $data = $response->json();
+                    if (isset($data[$year]) && is_array($data[$year])) {
+                        $yearCount = 0;
+                        foreach ($data[$year] as $month => $days) {
+                            if (is_array($days)) {
+                                foreach ($days as $dateStr => $details) {
+                                    try {
+                                        $parsedDate = Carbon::parse($dateStr);
+                                        
+                                        $type = 'Festival';
+                                        if (isset($details['type'])) {
+                                            if (stripos($details['type'], 'Government') !== false) {
+                                                $type = 'Regular';
+                                            }
+                                        }
+
+                                        // Use firstOrCreate to prevent duplicates and respect unique constraint on date
+                                        $holiday = Holiday::firstOrCreate(
+                                            ['date' => $parsedDate->format('Y-m-d')],
+                                            [
+                                                'name' => $details['event'] ?? 'Holiday',
+                                                'type' => $type,
+                                            ]
+                                        );
+                                        if ($holiday->wasRecentlyCreated) {
+                                            $yearCount++;
+                                        }
+                                    } catch (\Exception $ex) {
+                                        // Skip item
+                                    }
                                 }
                             }
                         }
+                        $totalCount += $yearCount;
+                        $fetchedYears[] = $year;
+                    } else {
+                        $skippedYears[] = $year;
                     }
-                    session()->flash('success', "Successfully fetched and saved {$count} holidays/festivals for {$nextYear}.");
                 } else {
-                    session()->flash('error', "Invalid holiday data structure returned from API.");
+                    $skippedYears[] = $year;
                 }
-            } else {
-                session()->flash('error', "Failed to fetch holidays from online API (Status: " . $response->status() . ").");
+            } catch (\Exception $e) {
+                $skippedYears[] = $year;
             }
-        } catch (\Exception $e) {
-            session()->flash('error', "Error fetching holidays: " . $e->getMessage());
+        }
+
+        if (count($fetchedYears) > 0) {
+            $msg = "Successfully fetched and saved {$totalCount} new holidays/festivals for years: " . implode(', ', $fetchedYears);
+            if (count($skippedYears) > 0) {
+                $msg .= ". (Skipped or no data for years: " . implode(', ', $skippedYears) . ")";
+            }
+            session()->flash('success', $msg);
+        } else {
+            session()->flash('error', "Failed to fetch holidays for any of the years.");
         }
     }
 

@@ -306,7 +306,7 @@
               </marquee>
           </div>
       @else
-          <div class="alert alert-info p-2 mb-2 shadow-sm border-info" style="overflow: hidden; border-radius: 8px;">
+          <div class="alert alert-warning p-2 mb-2 shadow-sm border-warning" style="overflow: hidden; border-radius: 8px;">
               <marquee behavior="scroll" direction="left" scrollamount="5" class="font-weight-bold mb-0 text-dark">
                   <i class="fas fa-calendar-day text-primary mr-2"></i> Today is {{ $layoutDateString }} | No festival scheduled for today. Have a wonderful and productive day!
               </marquee>
