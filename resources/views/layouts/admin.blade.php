@@ -290,6 +290,30 @@
 
   <!-- Content Wrapper. Contains page content -->
   <div class="content-wrapper">
+    @php
+      $layoutToday = \Carbon\Carbon::today();
+      $layoutDateString = $layoutToday->format('l, F d, Y');
+      $layoutHolidayToday = \App\Models\Holiday::whereDate('date', $layoutToday)->first();
+      $layoutFestival = $layoutHolidayToday ? ($layoutHolidayToday->name . ' (' . $layoutHolidayToday->type . ')') : null;
+    @endphp
+
+    <!-- Marquee Banner for Today's Date and Festival/Holiday -->
+    <div class="container-fluid pt-2">
+      @if($layoutFestival)
+          <div class="alert alert-warning p-2 mb-2 shadow-sm border-warning" style="overflow: hidden; border-radius: 8px;">
+              <marquee behavior="scroll" direction="left" scrollamount="5" class="font-weight-bold mb-0">
+                  <i class="fas fa-gift text-danger mr-2"></i> Today is {{ $layoutDateString }} | <span class="text-danger font-weight-bold">Today's Festival/Holiday: {{ $layoutFestival }}</span> 🎉
+              </marquee>
+          </div>
+      @else
+          <div class="alert alert-info p-2 mb-2 shadow-sm border-info" style="overflow: hidden; border-radius: 8px;">
+              <marquee behavior="scroll" direction="left" scrollamount="5" class="font-weight-bold mb-0 text-dark">
+                  <i class="fas fa-calendar-day text-primary mr-2"></i> Today is {{ $layoutDateString }} | No festival scheduled for today. Have a wonderful and productive day!
+              </marquee>
+          </div>
+      @endif
+    </div>
+
     @if(isset($header))
     <!-- Content Header (Page header) -->
     <section class="content-header">
