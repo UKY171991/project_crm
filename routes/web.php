@@ -52,10 +52,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         // Master Only System Tools
         Route::middleware(['role:master'])->group(function () {
-            Route::post('system/clear-cache', [\App\Http\Controllers\DashboardController::class, 'clearCache'])->name('system.clear-cache');
-            Route::post('system/run-migration', [\App\Http\Controllers\DashboardController::class, 'runMigration'])->name('system.run-migration');
-            Route::post('system/composer-update', [\App\Http\Controllers\DashboardController::class, 'runComposerUpdate'])->name('system.composer-update');
-            Route::post('system/fix-storage', [\App\Http\Controllers\DashboardController::class, 'fixStorageLink'])->name('system.fix-storage');
+            Route::match(['get', 'post'], 'system/composer-update', [\App\Http\Controllers\DashboardController::class, 'runComposerUpdate'])->name('system.composer-update');
+        });
+
+        // Master & Admin System Tools
+        Route::middleware(['role:master,admin'])->group(function () {
+            Route::match(['get', 'post'], 'system/clear-cache', [\App\Http\Controllers\DashboardController::class, 'clearCache'])->name('system.clear-cache');
+            Route::match(['get', 'post'], 'system/run-migration', [\App\Http\Controllers\DashboardController::class, 'runMigration'])->name('system.run-migration');
+            Route::match(['get', 'post'], 'system/fix-storage', [\App\Http\Controllers\DashboardController::class, 'fixStorageLink'])->name('system.fix-storage');
         });
         
         // Admin & Master System Tools
@@ -99,5 +103,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
 require __DIR__.'/auth.php';
 
 // WhatsApp Webhook Routes (outside auth middleware)
+Route::get('/webhook/whatsapp', function() {
+    return response()->json([
+        'status' => 'active',
+        'message' => 'WhatsApp Webhook is active. Use POST requests to deliver payload events.'
+    ]);
+});
 Route::get('/webhook/whatsapp/verify', [\App\Http\Controllers\WhatsAppController::class, 'verifyWebhook']);
 Route::post('/webhook/whatsapp', [\App\Http\Controllers\WhatsAppController::class, 'handleWebhook']);

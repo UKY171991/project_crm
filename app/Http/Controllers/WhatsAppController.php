@@ -25,6 +25,14 @@ class WhatsAppController extends Controller
         $token = $request->get('hub_verify_token');
         $challenge = $request->get('hub_challenge');
 
+        // If accessed directly in browser without parameters
+        if (!$mode && !$token && !$challenge) {
+            return response()->json([
+                'status' => 'active',
+                'message' => 'WhatsApp Webhook Verification endpoint is active and waiting for Meta requests.'
+            ]);
+        }
+
         if ($mode === 'subscribe' && $token === $verifyToken) {
             Log::info('WhatsApp webhook verified successfully');
             return response($challenge, 200);

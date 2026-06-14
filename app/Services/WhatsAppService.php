@@ -263,14 +263,14 @@ class WhatsAppService
         }
 
         $templateMap = [
-            'pending_to_running' => 'project_status_pending_to_running',
-            'running_to_pending_payment' => 'project_status_running_to_pending_payment',
-            'pending_payment_to_completed' => 'project_status_pending_payment_to_completed',
-            'pending_to_canceled' => 'project_status_pending_to_canceled',
-            'running_to_canceled' => 'project_status_running_to_canceled',
-            'pending_payment_to_canceled' => 'project_status_pending_payment_to_canceled',
-            'canceled_to_pending' => 'project_status_canceled_to_pending',
-            'canceled_to_running' => 'project_status_canceled_to_running',
+            'pending_to_running' => config('services.whatsapp.template_pending_to_running', 'project_status_pending_to_running'),
+            'running_to_pending_payment' => config('services.whatsapp.template_running_to_pending_payment', 'project_status_running_to_pending_payment'),
+            'pending_payment_to_completed' => config('services.whatsapp.template_pending_payment_to_completed', 'project_status_pending_payment_to_completed'),
+            'pending_to_canceled' => config('services.whatsapp.template_pending_to_canceled', 'project_status_pending_to_canceled'),
+            'running_to_canceled' => config('services.whatsapp.template_running_to_canceled', 'project_status_running_to_canceled'),
+            'pending_payment_to_canceled' => config('services.whatsapp.template_pending_payment_to_canceled', 'project_status_pending_payment_to_canceled'),
+            'canceled_to_pending' => config('services.whatsapp.template_canceled_to_pending', 'project_status_canceled_to_pending'),
+            'canceled_to_running' => config('services.whatsapp.template_canceled_to_running', 'project_status_canceled_to_running'),
         ];
         
         $key = strtolower($oldStatus) . '_to_' . strtolower($newStatus);
@@ -512,6 +512,61 @@ class WhatsAppService
         } catch (\Exception $e) {
             Log::error('Fast2SMS Simple template exception', [
                 'phone' => $phoneNumber,
+                'error' => $e->getMessage()
+            ]);
+            return false;
+        }
+    }
+
+    /**
+     * Send dynamic template message
+     */
+    public function sendTemplateMessage($phoneNumber, $templateName, $language = 'en', $variables = [])
+    {
+        try {
+            if ($this->type === 'fast2sms') {
+                $varsString = is_array($variables) ? implode('|', $variables) : $variables;
+                return $this->sendFast2SMSSimple($phoneNumber, $templateName, $varsString);
+            }
+
+            // Official Meta API implementation
+            $parameters = [];
+            foreach ($variables as $var) {
+                $parameters[] = [
+                    'type' => 'text',
+                    'text' => trim($var)
+                ];
+            }
+
+            $payload = [
+                'messaging_product' => 'whatsapp',
+                'to' => $this->formatPhoneNumber($phoneNumber),
+                'type' => 'template',
+                'template' => [
+                    'name' => $templateName,
+                    'language' => [
+                        'code' => $language
+                    ]
+                ]
+            ];
+
+            if (!empty($parameters)) {
+                $payload['template']['components'] = [
+                    [
+                        'type' => 'body',
+                        'parameters' => $parameters
+                    ]
+                ];
+            }
+
+            $response = Http::withHeaders($this->getHeaders())
+                ->post("{$this->baseUrl}/{$this->phoneNumberId}/messages", $payload);
+
+            return $response->successful();
+        } catch (\Exception $e) {
+            Log::error('WhatsApp template message error', [
+                'phone' => $phoneNumber,
+                'template' => $templateName,
                 'error' => $e->getMessage()
             ]);
             return false;

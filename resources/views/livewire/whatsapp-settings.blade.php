@@ -68,9 +68,26 @@
                     </div>
                     <div class="col-md-6">
                         <div class="form-group">
-                            <label>Template Name</label>
+                            <label>General Template Name</label>
                             <input type="text" class="form-control" wire:model="settings.template_name" placeholder="project_status_update">
                             @error('settings.template_name') <span class="text-danger">{{ $message }}</span> @enderror
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>Payment Template Name</label>
+                            <input type="text" class="form-control" wire:model="settings.payment_template_name" placeholder="project_payment_status">
+                            @error('settings.payment_template_name') <span class="text-danger">{{ $message }}</span> @enderror
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>Proposal Template Name</label>
+                            <input type="text" class="form-control" wire:model="settings.proposal_template_name" placeholder="praposal">
+                            @error('settings.proposal_template_name') <span class="text-danger">{{ $message }}</span> @enderror
                         </div>
                     </div>
                 </div>
@@ -97,6 +114,93 @@
                     </div>
                     @endif
                 </div>
+
+                <!-- Toggle for Single Template vs Multiple Status-Specific Templates -->
+                <div class="card card-outline card-secondary mb-3 mt-2">
+                    <div class="card-body">
+                        <div class="form-group mb-0">
+                            <div class="custom-control custom-switch">
+                                <input type="checkbox" class="custom-control-input" id="use_default_only" wire:model.live="settings.use_default_only">
+                                <label class="custom-control-label font-weight-bold" for="use_default_only">Use Single Template for all status changes</label>
+                            </div>
+                            <small class="text-muted text-xs d-block mt-1">If enabled, the General Template Name is used for all status transition alerts. If disabled, you can configure individual templates for each status change below.</small>
+                        </div>
+                    </div>
+                </div>
+
+                @if(!($settings['use_default_only'] ?? true))
+                <div class="card card-outline card-info mb-3">
+                    <div class="card-header">
+                        <h4 class="card-title text-sm"><i class="fas fa-random mr-1"></i> Status Transition Templates</h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Pending to Running</label>
+                                    <input type="text" class="form-control" wire:model="settings.template_pending_to_running" placeholder="project_status_pending_to_running">
+                                    @error('settings.template_pending_to_running') <span class="text-danger">{{ $message }}</span> @enderror
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Running to Pending Payment</label>
+                                    <input type="text" class="form-control" wire:model="settings.template_running_to_pending_payment" placeholder="project_status_running_to_pending_payment">
+                                    @error('settings.template_running_to_pending_payment') <span class="text-danger">{{ $message }}</span> @enderror
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Pending Payment to Completed</label>
+                                    <input type="text" class="form-control" wire:model="settings.template_pending_payment_to_completed" placeholder="project_status_pending_payment_to_completed">
+                                    @error('settings.template_pending_payment_to_completed') <span class="text-danger">{{ $message }}</span> @enderror
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Pending to Canceled</label>
+                                    <input type="text" class="form-control" wire:model="settings.template_pending_to_canceled" placeholder="project_status_pending_to_canceled">
+                                    @error('settings.template_pending_to_canceled') <span class="text-danger">{{ $message }}</span> @enderror
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Running to Canceled</label>
+                                    <input type="text" class="form-control" wire:model="settings.template_running_to_canceled" placeholder="project_status_running_to_canceled">
+                                    @error('settings.template_running_to_canceled') <span class="text-danger">{{ $message }}</span> @enderror
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Pending Payment to Canceled</label>
+                                    <input type="text" class="form-control" wire:model="settings.template_pending_payment_to_canceled" placeholder="project_status_pending_payment_to_canceled">
+                                    @error('settings.template_pending_payment_to_canceled') <span class="text-danger">{{ $message }}</span> @enderror
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Canceled to Pending</label>
+                                    <input type="text" class="form-control" wire:model="settings.template_canceled_to_pending" placeholder="project_status_canceled_to_pending">
+                                    @error('settings.template_canceled_to_pending') <span class="text-danger">{{ $message }}</span> @enderror
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Canceled to Running</label>
+                                    <input type="text" class="form-control" wire:model="settings.template_canceled_to_running" placeholder="project_status_canceled_to_running">
+                                    @error('settings.template_canceled_to_running') <span class="text-danger">{{ $message }}</span> @enderror
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                @endif
                 @else
                 <div class="row">
                     <div class="col-md-12">
@@ -126,32 +230,149 @@
         </div>
     </div>
 
+    <!-- Templates Directory Section -->
+    <div class="card mt-4">
+        <div class="card-header bg-info text-white">
+            <h3 class="card-title"><i class="fas fa-list mr-2"></i> WhatsApp Templates Directory</h3>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered table-striped">
+                    <thead>
+                        <tr>
+                            <th>Template Name</th>
+                            <th>Template Code / ID</th>
+                            <th>Language</th>
+                            <th style="width: 100px;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse($customTemplates as $index => $tmpl)
+                            <tr>
+                                <td>{{ $tmpl['name'] }}</td>
+                                <td><code>{{ $tmpl['code'] }}</code></td>
+                                <td><span class="badge badge-secondary">{{ $tmpl['language'] }}</span></td>
+                                <td>
+                                    <button type="button" wire:click="deleteCustomTemplate({{ $index }})" class="btn btn-danger btn-xs">
+                                        <i class="fas fa-trash"></i> Delete
+                                    </button>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="4" class="text-center text-muted">No custom templates added yet. Add your first template below!</td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+
+            <hr>
+
+            <h5>Add New Custom Template</h5>
+            <form wire:submit.prevent="addCustomTemplate">
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label>Template Name / Label</label>
+                            <input type="text" class="form-control" wire:model="newTemplateName" placeholder="e.g. Welcome Message">
+                            @error('newTemplateName') <span class="text-danger">{{ $message }}</span> @enderror
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label>Template ID / Code</label>
+                            <input type="text" class="form-control" wire:model="newTemplateCode" placeholder="e.g. 12345 or project_welcome">
+                            @error('newTemplateCode') <span class="text-danger">{{ $message }}</span> @enderror
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="form-group">
+                            <label>Language</label>
+                            <select class="form-control" wire:model="newTemplateLanguage">
+                                <option value="en">English</option>
+                                <option value="hi">Hindi</option>
+                                <option value="es">Spanish</option>
+                                <option value="fr">French</option>
+                            </select>
+                            @error('newTemplateLanguage') <span class="text-danger">{{ $message }}</span> @enderror
+                        </div>
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end">
+                        <div class="form-group w-100">
+                            <button type="submit" class="btn btn-info btn-block">
+                                <i class="fas fa-plus"></i> Add Template
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Test Message Section -->
     <div class="card mt-4">
-        <div class="card-header">
-            <h3 class="card-title">Send Test Message</h3>
+        <div class="card-header bg-success text-white">
+            <h3 class="card-title"><i class="fas fa-paper-plane mr-2"></i> Send Test Message</h3>
         </div>
         <div class="card-body">
             <form wire:submit="sendTestMessage">
                 <div class="row">
-                    <div class="col-md-6">
+                    <div class="col-md-4">
                         <div class="form-group">
                             <label>Phone Number</label>
                             <input type="text" class="form-control" wire:model="testPhone" placeholder="91234567890">
                             @error('testPhone') <span class="text-danger">{{ $message }}</span> @enderror
                         </div>
                     </div>
-                    <div class="col-md-6">
+                    <div class="col-md-4">
                         <div class="form-group">
-                            <label>Test Message</label>
-                            <input type="text" class="form-control" wire:model="testMessage" placeholder="Enter test message">
-                            @error('testMessage') <span class="text-danger">{{ $message }}</span> @enderror
+                            <label>Message Type</label>
+                            <select class="form-control" wire:model.live="testMessageType">
+                                <option value="text">Plain Text Message</option>
+                                <option value="template">Template Message</option>
+                            </select>
                         </div>
                     </div>
+                    @if($testMessageType === 'template')
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label>Select Template</label>
+                                <select class="form-control" wire:model="selectedTemplateCode">
+                                    <option value="">-- Choose Template --</option>
+                                    @foreach($customTemplates as $tmpl)
+                                        <option value="{{ $tmpl['code'] }}">{{ $tmpl['name'] }} ({{ $tmpl['code'] }})</option>
+                                    @endforeach
+                                </select>
+                                @error('selectedTemplateCode') <span class="text-danger">{{ $message }}</span> @enderror
+                            </div>
+                        </div>
+                    @else
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label>Test Message</label>
+                                <input type="text" class="form-control" wire:model="testMessage" placeholder="Enter test message">
+                                @error('testMessage') <span class="text-danger">{{ $message }}</span> @enderror
+                            </div>
+                        </div>
+                    @endif
                 </div>
-                <div class="form-group">
+
+                @if($testMessageType === 'template')
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="form-group">
+                                <label>Template Variables (Comma-separated, order matters)</label>
+                                <input type="text" class="form-control" wire:model="testTemplateVariables" placeholder="e.g. Var1, Var2, Var3">
+                                <small class="text-muted">Enter variables for your template in order, separated by commas.</small>
+                            </div>
+                        </div>
+                    </div>
+                @endif
+
+                <div class="form-group mt-2">
                     <button type="submit" class="btn btn-success">
-                        <i class="fas fa-paper-plane"></i> Send Test Message
+                        <i class="fas fa-paper-plane mr-1"></i> Send Test Message
                     </button>
                 </div>
             </form>
@@ -183,8 +404,8 @@
 
     <!-- Webhook Information -->
     <div class="card mt-4">
-        <div class="card-header">
-            <h3 class="card-title">Webhook Configuration</h3>
+        <div class="card-header bg-dark text-white">
+            <h3 class="card-title"><i class="fas fa-link mr-2"></i> Webhook Configuration</h3>
         </div>
         <div class="card-body">
             <div class="row">
@@ -202,47 +423,29 @@
                             </tr>
                         </table>
                     </div>
-                    <p class="text-muted">
+                    <p class="text-muted mb-4">
                         Configure these URLs in your Meta WhatsApp Business account to receive webhook events.
                     </p>
+
+                    <div class="alert alert-info shadow-sm">
+                        <h5><i class="fas fa-info-circle mr-2"></i> Meta Webhook Setup Guide</h5>
+                        <p class="mb-2">Meta (Facebook) requires a secure, publicly accessible HTTPS URL to deliver webhook events. Since localhost URLs are private and HTTP-only, they will not work directly. Follow these steps to set up webhooks for development:</p>
+                        <ol class="pl-3 mb-2">
+                            <li class="mb-2"><strong>Expose Local Host:</strong> Use a public tunneling tool like <strong>ngrok</strong> or <strong>expose</strong>:
+                                <code class="d-block bg-dark text-white p-2 rounded mt-1">ngrok http 8000</code>
+                            </li>
+                            <li class="mb-2"><strong>Get HTTPS URL:</strong> Copy the secure public URL generated by the tunneling tool (e.g. <code>https://abc1-23-45-67.ngrok-free.app</code>).</li>
+                            <li class="mb-2"><strong>Configure Meta Developer Dashboard:</strong>
+                                <ul>
+                                    <li>Navigate to your <strong>Meta App &gt; WhatsApp &gt; Configuration</strong>.</li>
+                                    <li>Under <strong>Callback URL</strong>, paste your public URL appended with the webhook path, for example: <br><code>https://abc1-23-45-67.ngrok-free.app/webhook/whatsapp</code></li>
+                                    <li>Under <strong>Verify Token</strong>, enter the exact value of the <strong>Webhook Verify Token</strong> configured in the settings above.</li>
+                                </ul>
+                            </li>
+                            <li><strong>Subscribe to Events:</strong> Click <strong>Manage</strong> next to Webhooks, and subscribe to the <code>messages</code> field to receive incoming messages.</li>
+                        </ol>
+                    </div>
                 </div>
-            </div>
-        </div>
-    <div class="card mt-4">
-        <div class="card-header bg-success text-white">
-            <h3 class="card-title"><i class="fab fa-whatsapp mr-2"></i> WhatsApp Reminder Templates</h3>
-        </div>
-        <div class="card-body">
-            <p class="text-muted mb-4 small">
-                <i class="fas fa-info-circle mr-1"></i> These templates are used for the manual WhatsApp reminder button in the Projects List.
-                <br>
-                Available Placeholders: <code>{greeting}</code>, <code>{name}</code>, <code>{title}</code>, <code>{currency}</code>, <code>{balance}</code>
-            </p>
-            
-            <div class="form-group">
-                <label>Pending Project Reminder</label>
-                <textarea class="form-control" wire:model="settings.reminder_pending" rows="2"></textarea>
-            </div>
-
-            <div class="form-group">
-                <label>Running Project Reminder</label>
-                <textarea class="form-control" wire:model="settings.reminder_running" rows="2"></textarea>
-            </div>
-
-            <div class="form-group">
-                <label>Pending Payment Reminder</label>
-                <textarea class="form-control" wire:model="settings.reminder_pending_payment" rows="2"></textarea>
-            </div>
-
-            <div class="form-group">
-                <label>Completed Project Message</label>
-                <textarea class="form-control" wire:model="settings.reminder_completed" rows="2"></textarea>
-            </div>
-            
-            <div class="form-group mt-3">
-                <button wire:click="saveSettings" class="btn btn-success shadow-sm">
-                    <i class="fas fa-save mr-1"></i> Save All Templates
-                </button>
             </div>
         </div>
     </div>

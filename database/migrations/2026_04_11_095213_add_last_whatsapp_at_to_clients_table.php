@@ -11,9 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('clients', function (Blueprint $table) {
-            $table->timestamp('last_whatsapp_at')->nullable()->after('phone');
-        });
+        if (!Schema::hasColumn('clients', 'last_whatsapp_at')) {
+            Schema::table('clients', function (Blueprint $table) {
+                $table->timestamp('last_whatsapp_at')->nullable()->after('phone');
+            });
+        }
     }
 
     /**
@@ -21,8 +23,10 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('clients', function (Blueprint $table) {
-            $table->dropColumn('last_whatsapp_at');
-        });
+        if (Schema::hasColumn('clients', 'last_whatsapp_at')) {
+            Schema::table('clients', function (Blueprint $table) {
+                $table->dropColumn('last_whatsapp_at');
+            });
+        }
     }
 };

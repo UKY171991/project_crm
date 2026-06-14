@@ -17,6 +17,17 @@ class WhatsappSettingsManager extends Component
         'version' => 'v18.0',
         'webhook_verify_token' => '',
         'template_name' => 'project_status_update',
+        'payment_template_name' => 'project_payment_status',
+        'proposal_template_name' => 'praposal',
+        'use_default_only' => true,
+        'template_pending_to_running' => 'project_status_pending_to_running',
+        'template_running_to_pending_payment' => 'project_status_running_to_pending_payment',
+        'template_pending_payment_to_completed' => 'project_status_pending_payment_to_completed',
+        'template_pending_to_canceled' => 'project_status_pending_to_canceled',
+        'template_running_to_canceled' => 'project_status_running_to_canceled',
+        'template_pending_payment_to_canceled' => 'project_status_pending_payment_to_canceled',
+        'template_canceled_to_pending' => 'project_status_canceled_to_pending',
+        'template_canceled_to_running' => 'project_status_canceled_to_running',
         'language' => 'en',
         'default_country_code' => '91',
         'enabled' => false,
@@ -27,6 +38,16 @@ class WhatsappSettingsManager extends Component
         'reminder_pending_payment' => '{greeting} {name}, your project {title} is completed. Please clear the balance of {currency} {balance}.',
         'reminder_completed' => '{greeting} {name}, your project {title} is completed. Thank you!',
     ];
+
+    public $customTemplates = [];
+    public $newTemplateName = '';
+    public $newTemplateCode = '';
+    public $newTemplateLanguage = 'en';
+
+    // Test send template properties
+    public $testMessageType = 'text'; // text or template
+    public $selectedTemplateCode = '';
+    public $testTemplateVariables = '';
 
     public $testPhone = '';
     public $testMessage = 'Test message from CRM system';
@@ -44,8 +65,22 @@ class WhatsappSettingsManager extends Component
             $rules['settings.phone_number_id'] = 'required|string';
             $rules['settings.version'] = 'required|string';
             $rules['settings.template_name'] = 'required|string';
+            $rules['settings.payment_template_name'] = 'required|string';
+            $rules['settings.proposal_template_name'] = 'required|string';
+            $rules['settings.use_default_only'] = 'required|boolean';
             $rules['settings.language'] = 'required|string';
             
+            if (!$this->settings['use_default_only']) {
+                $rules['settings.template_pending_to_running'] = 'required|string';
+                $rules['settings.template_running_to_pending_payment'] = 'required|string';
+                $rules['settings.template_pending_payment_to_completed'] = 'required|string';
+                $rules['settings.template_pending_to_canceled'] = 'required|string';
+                $rules['settings.template_running_to_canceled'] = 'required|string';
+                $rules['settings.template_pending_payment_to_canceled'] = 'required|string';
+                $rules['settings.template_canceled_to_pending'] = 'required|string';
+                $rules['settings.template_canceled_to_running'] = 'required|string';
+            }
+
             if ($this->settings['type'] === 'official') {
                 $rules['settings.webhook_verify_token'] = 'required|string';
             } else {
@@ -58,6 +93,17 @@ class WhatsappSettingsManager extends Component
             $rules['settings.version'] = 'nullable|string';
             $rules['settings.webhook_verify_token'] = 'nullable|string';
             $rules['settings.template_name'] = 'nullable|string';
+            $rules['settings.payment_template_name'] = 'nullable|string';
+            $rules['settings.proposal_template_name'] = 'nullable|string';
+            $rules['settings.use_default_only'] = 'nullable|boolean';
+            $rules['settings.template_pending_to_running'] = 'nullable|string';
+            $rules['settings.template_running_to_pending_payment'] = 'nullable|string';
+            $rules['settings.template_pending_payment_to_completed'] = 'nullable|string';
+            $rules['settings.template_pending_to_canceled'] = 'nullable|string';
+            $rules['settings.template_running_to_canceled'] = 'nullable|string';
+            $rules['settings.template_pending_payment_to_canceled'] = 'nullable|string';
+            $rules['settings.template_canceled_to_pending'] = 'nullable|string';
+            $rules['settings.template_canceled_to_running'] = 'nullable|string';
             $rules['settings.language'] = 'nullable|string';
         }
 
@@ -85,6 +131,17 @@ class WhatsappSettingsManager extends Component
             'version' => config('services.whatsapp.version', 'v18.0'),
             'webhook_verify_token' => config('services.whatsapp.webhook_verify_token', ''),
             'template_name' => config('services.whatsapp.template_name', 'project_status_update'),
+            'payment_template_name' => config('services.whatsapp.payment_template_name', 'project_payment_status'),
+            'proposal_template_name' => config('services.whatsapp.proposal_template_name', 'praposal'),
+            'use_default_only' => filter_var(config('services.whatsapp.use_default_only', true), FILTER_VALIDATE_BOOLEAN),
+            'template_pending_to_running' => config('services.whatsapp.template_pending_to_running', 'project_status_pending_to_running'),
+            'template_running_to_pending_payment' => config('services.whatsapp.template_running_to_pending_payment', 'project_status_running_to_pending_payment'),
+            'template_pending_payment_to_completed' => config('services.whatsapp.template_pending_payment_to_completed', 'project_status_pending_payment_to_completed'),
+            'template_pending_to_canceled' => config('services.whatsapp.template_pending_to_canceled', 'project_status_pending_to_canceled'),
+            'template_running_to_canceled' => config('services.whatsapp.template_running_to_canceled', 'project_status_running_to_canceled'),
+            'template_pending_payment_to_canceled' => config('services.whatsapp.template_pending_payment_to_canceled', 'project_status_pending_payment_to_canceled'),
+            'template_canceled_to_pending' => config('services.whatsapp.template_canceled_to_pending', 'project_status_canceled_to_pending'),
+            'template_canceled_to_running' => config('services.whatsapp.template_canceled_to_running', 'project_status_canceled_to_running'),
             'language' => config('services.whatsapp.language', 'en'),
             'default_country_code' => config('services.whatsapp.default_country_code', '91'),
             'enabled' => filter_var(config('services.whatsapp.enabled', false), FILTER_VALIDATE_BOOLEAN),
@@ -103,6 +160,12 @@ class WhatsappSettingsManager extends Component
         if (empty($this->settings['phone_number_id'])) {
              $this->settings['phone_number_id'] = env('WHATSAPP_PHONE_NUMBER_ID', '');
         }
+
+        // Load dynamic templates
+        $this->customTemplates = json_decode(\App\Models\Setting::get('whatsapp_templates', '[]'), true);
+        if (!is_array($this->customTemplates)) {
+            $this->customTemplates = [];
+        }
     }
 
     public function saveSettings()
@@ -120,6 +183,17 @@ class WhatsappSettingsManager extends Component
                 'WHATSAPP_API_VERSION' => $this->settings['version'],
                 'WHATSAPP_WEBHOOK_VERIFY_TOKEN' => $this->settings['webhook_verify_token'],
                 'WHATSAPP_TEMPLATE_NAME' => $this->settings['template_name'],
+                'WHATSAPP_PAYMENT_TEMPLATE_NAME' => $this->settings['payment_template_name'],
+                'WHATSAPP_PROPOSAL_TEMPLATE_NAME' => $this->settings['proposal_template_name'],
+                'WHATSAPP_USE_DEFAULT_ONLY' => $this->settings['use_default_only'] ? 'true' : 'false',
+                'WHATSAPP_TEMPLATE_PENDING_TO_RUNNING' => $this->settings['template_pending_to_running'],
+                'WHATSAPP_TEMPLATE_RUNNING_TO_PENDING_PAYMENT' => $this->settings['template_running_to_pending_payment'],
+                'WHATSAPP_TEMPLATE_PENDING_PAYMENT_TO_COMPLETED' => $this->settings['template_pending_payment_to_completed'],
+                'WHATSAPP_TEMPLATE_PENDING_TO_CANCELED' => $this->settings['template_pending_to_canceled'],
+                'WHATSAPP_TEMPLATE_RUNNING_TO_CANCELED' => $this->settings['template_running_to_canceled'],
+                'WHATSAPP_TEMPLATE_PENDING_PAYMENT_TO_CANCELED' => $this->settings['template_pending_payment_to_canceled'],
+                'WHATSAPP_TEMPLATE_CANCELED_TO_PENDING' => $this->settings['template_canceled_to_pending'],
+                'WHATSAPP_TEMPLATE_CANCELED_TO_RUNNING' => $this->settings['template_canceled_to_running'],
                 'WHATSAPP_LANGUAGE' => $this->settings['language'],
                 'WHATSAPP_DEFAULT_COUNTRY_CODE' => $this->settings['default_country_code'],
                 'WHATSAPP_ENABLED' => $this->settings['enabled'] ? 'true' : 'false',
@@ -144,6 +218,9 @@ class WhatsappSettingsManager extends Component
 
             file_put_contents($envPath, $envContent);
 
+            // Save dynamic templates to DB
+            \App\Models\Setting::set('whatsapp_templates', json_encode($this->customTemplates));
+
             // Clear configuration cache
             Artisan::call('config:clear');
 
@@ -155,6 +232,39 @@ class WhatsappSettingsManager extends Component
         } catch (\Exception $e) {
             Log::error('Failed to save WhatsApp settings', ['error' => $e->getMessage()]);
             session()->flash('error', 'Failed to save settings: ' . $e->getMessage());
+        }
+    }
+
+    public function addCustomTemplate()
+    {
+        $this->validate([
+            'newTemplateName' => 'required|string|max:100',
+            'newTemplateCode' => 'required|string|max:100',
+            'newTemplateLanguage' => 'required|string|max:10',
+        ]);
+
+        $this->customTemplates[] = [
+            'name' => $this->newTemplateName,
+            'code' => $this->newTemplateCode,
+            'language' => $this->newTemplateLanguage,
+        ];
+
+        \App\Models\Setting::set('whatsapp_templates', json_encode($this->customTemplates));
+
+        $this->newTemplateName = '';
+        $this->newTemplateCode = '';
+        $this->newTemplateLanguage = 'en';
+
+        session()->flash('success', 'Template added successfully!');
+    }
+
+    public function deleteCustomTemplate($index)
+    {
+        if (isset($this->customTemplates[$index])) {
+            unset($this->customTemplates[$index]);
+            $this->customTemplates = array_values($this->customTemplates);
+            \App\Models\Setting::set('whatsapp_templates', json_encode($this->customTemplates));
+            session()->flash('success', 'Template deleted successfully!');
         }
     }
 
@@ -193,23 +303,63 @@ class WhatsappSettingsManager extends Component
 
     public function sendTestMessage()
     {
-        $this->validate([
-            'testPhone' => 'required|string',
-            'testMessage' => 'required|string',
-        ]);
+        if ($this->testMessageType === 'template') {
+            $this->validate([
+                'testPhone' => 'required|string',
+                'selectedTemplateCode' => 'required|string',
+            ]);
 
-        try {
-            $whatsappService = new WhatsAppService($this->settings);
-            $success = $whatsappService->sendTextMessage($this->testPhone, $this->testMessage);
-            
-            if ($success) {
-                session()->flash('success', 'Test message sent successfully!');
-            } else {
-                session()->flash('error', 'Failed to send test message. Check your template approval or phone number.');
+            try {
+                $whatsappService = new WhatsAppService($this->settings);
+                
+                $variables = [];
+                if (!empty($this->testTemplateVariables)) {
+                    $variables = explode(',', $this->testTemplateVariables);
+                }
+                
+                $lang = 'en';
+                foreach ($this->customTemplates as $tmpl) {
+                    if ($tmpl['code'] == $this->selectedTemplateCode) {
+                        $lang = $tmpl['language'];
+                        break;
+                    }
+                }
+
+                $success = $whatsappService->sendTemplateMessage(
+                    $this->testPhone,
+                    $this->selectedTemplateCode,
+                    $lang,
+                    $variables
+                );
+
+                if ($success) {
+                    session()->flash('success', 'Test template message sent successfully!');
+                } else {
+                    session()->flash('error', 'Failed to send test template message. Check your template variables or phone number.');
+                }
+            } catch (\Exception $e) {
+                Log::error('Test template message failed', ['error' => $e->getMessage()]);
+                session()->flash('error', 'Test template message failed: ' . $e->getMessage());
             }
-        } catch (\Exception $e) {
-            Log::error('Test message failed', ['error' => $e->getMessage()]);
-            session()->flash('error', 'Test message failed: ' . $e->getMessage());
+        } else {
+            $this->validate([
+                'testPhone' => 'required|string',
+                'testMessage' => 'required|string',
+            ]);
+
+            try {
+                $whatsappService = new WhatsAppService($this->settings);
+                $success = $whatsappService->sendTextMessage($this->testPhone, $this->testMessage);
+                
+                if ($success) {
+                    session()->flash('success', 'Test message sent successfully!');
+                } else {
+                    session()->flash('error', 'Failed to send test message. Check your template approval or phone number.');
+                }
+            } catch (\Exception $e) {
+                Log::error('Test message failed', ['error' => $e->getMessage()]);
+                session()->flash('error', 'Test message failed: ' . $e->getMessage());
+            }
         }
     }
 
