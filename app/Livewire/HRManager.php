@@ -9,6 +9,7 @@ use App\Models\Attendance;
 use App\Models\Leave;
 use App\Models\Holiday;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Http;
 
 class HRManager extends Component
 {
@@ -19,6 +20,7 @@ class HRManager extends Component
     
     // Holiday Config
     public $holidayDate, $holidayName, $holidayType = 'Festival';
+    public $filterYear;
 
     // Salary Calculation
     public $calcMonth, $calcYear, $calcUserId;
@@ -28,10 +30,21 @@ class HRManager extends Component
     public $editingSalaryId = null;
     public $editingHolidayId = null;
 
+    public $todayFestival = null;
+    public $todayDateString = '';
+
     public function mount()
     {
         $this->calcMonth = date('m');
         $this->calcYear = date('Y');
+        $this->filterYear = date('Y');
+        
+        $today = Carbon::today();
+        $this->todayDateString = $today->format('l, F d, Y');
+        $holidayToday = Holiday::whereDate('date', $today)->first();
+        if ($holidayToday) {
+            $this->todayFestival = $holidayToday->name . ' (' . $holidayToday->type . ')';
+        }
     }
 
     public function saveSalaryConfig()
@@ -70,6 +83,54 @@ class HRManager extends Component
 
         session()->flash('success', 'Holiday added.');
         $this->reset(['holidayDate', 'holidayName', 'editingHolidayId']);
+    }
+
+    public function fetchNextYearHolidays()
+    {
+        $nextYear = (int)date('Y') + 1;
+        try {
+            $response = Http::withoutVerifying()->get("https://jayantur13.github.io/calendar-bharat/calendar/{$nextYear}.json");
+            if ($response->successful()) {
+                $data = $response->json();
+                if (isset($data[$nextYear]) && is_array($data[$nextYear])) {
+                    $count = 0;
+                    foreach ($data[$nextYear] as $month => $days) {
+                        if (is_array($days)) {
+                            foreach ($days as $dateStr => $details) {
+                                try {
+                                    $parsedDate = Carbon::parse($dateStr);
+                                    
+                                    $type = 'Festival';
+                                    if (isset($details['type'])) {
+                                        if (stripos($details['type'], 'Government') !== false) {
+                                            $type = 'Regular';
+                                        }
+                                    }
+
+                                    Holiday::updateOrCreate(
+                                        ['date' => $parsedDate->format('Y-m-d')],
+                                        [
+                                            'name' => $details['event'] ?? 'Holiday',
+                                            'type' => $type,
+                                        ]
+                                    );
+                                    $count++;
+                                } catch (\Exception $ex) {
+                                    // Skip item
+                                }
+                            }
+                        }
+                    }
+                    session()->flash('success', "Successfully fetched and saved {$count} holidays/festivals for {$nextYear}.");
+                } else {
+                    session()->flash('error', "Invalid holiday data structure returned from API.");
+                }
+            } else {
+                session()->flash('error', "Failed to fetch holidays from online API (Status: " . $response->status() . ").");
+            }
+        } catch (\Exception $e) {
+            session()->flash('error', "Error fetching holidays: " . $e->getMessage());
+        }
     }
 
     public function editSalary($id)
@@ -179,6 +240,20 @@ class HRManager extends Component
 
     public function render()
     {
+        // Get unique years from database for the filter dropdown
+        $holidayYears = Holiday::pluck('date')->map(fn($d) => $d ? $d->year : null)->filter()->unique()->toArray();
+        $currentYear = (int)date('Y');
+        $availableYears = array_unique(array_merge([$currentYear], $holidayYears));
+        sort($availableYears);
+        $availableYears = array_reverse($availableYears);
+
+        // Fetch holidays filtered by year
+        $holidayQuery = Holiday::query();
+        if ($this->filterYear) {
+            $holidayQuery->whereYear('date', $this->filterYear);
+        }
+        $holidays = $holidayQuery->orderBy('date', 'desc')->get();
+
         return view('livewire.h-r-manager', [
             'users' => User::with('role')
                 ->whereHas('role', function($q) {
@@ -187,7 +262,8 @@ class HRManager extends Component
                 ->orderBy('name', 'asc')
                 ->get(),
             'salaries' => UserSalary::with('user')->get(),
-            'holidays' => Holiday::orderBy('date', 'desc')->get(),
+            'holidays' => $holidays,
+            'availableYears' => $availableYears,
         ]);
     }
 }

@@ -1,4 +1,37 @@
-<div class="row">
+<div>
+    @if(session()->has('success'))
+        <div class="alert alert-success alert-dismissible fade show shadow-sm" role="alert">
+            <i class="fas fa-check-circle mr-2"></i> {{ session('success') }}
+            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+            </button>
+        </div>
+    @endif
+    @if(session()->has('error'))
+        <div class="alert alert-danger alert-dismissible fade show shadow-sm" role="alert">
+            <i class="fas fa-exclamation-circle mr-2"></i> {{ session('error') }}
+            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+            </button>
+        </div>
+    @endif
+
+    <!-- Marquee Banner for Today's Date and Festival/Holiday -->
+    @if($todayFestival)
+        <div class="alert alert-warning p-2 mb-3 shadow-sm border-warning" style="overflow: hidden; border-radius: 8px;">
+            <marquee behavior="scroll" direction="left" scrollamount="5" class="font-weight-bold mb-0">
+                <i class="fas fa-gift text-danger mr-2"></i> Today is {{ $todayDateString }} | <span class="text-danger font-weight-bold">Today's Festival/Holiday: {{ $todayFestival }}</span> 🎉
+            </marquee>
+        </div>
+    @else
+        <div class="alert alert-info p-2 mb-3 shadow-sm border-info" style="overflow: hidden; border-radius: 8px;">
+            <marquee behavior="scroll" direction="left" scrollamount="5" class="font-weight-bold mb-0 text-dark">
+                <i class="fas fa-calendar-day text-primary mr-2"></i> Today is {{ $todayDateString }} | No festival scheduled for today. Have a wonderful and productive day!
+            </marquee>
+        </div>
+    @endif
+
+    <div class="row">
     <div class="col-md-12">
         <div class="card card-tabs">
             <div class="card-header p-0 pt-1">
@@ -187,7 +220,26 @@
                                 @endif
                             </div>
                             <div class="col-md-8">
-                                <h5 class="font-weight-bold mb-3">Upcoming / Past Holidays</h5>
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <h5 class="font-weight-bold mb-0">Upcoming / Past Holidays</h5>
+                                    <div class="form-inline">
+                                        <button class="btn btn-sm btn-success mr-3 shadow-sm font-weight-bold" wire:click="fetchNextYearHolidays" wire:loading.attr="disabled">
+                                            <span wire:loading.remove wire:target="fetchNextYearHolidays">
+                                                <i class="fas fa-download mr-1"></i> Fetch Next Year's Holidays
+                                            </span>
+                                            <span wire:loading wire:target="fetchNextYearHolidays">
+                                                <span class="spinner-border spinner-border-sm mr-1" role="status" aria-hidden="true"></span> Fetching...
+                                            </span>
+                                        </button>
+                                        <label class="mr-2 mb-0 font-weight-bold text-xs">Filter Year:</label>
+                                        <select class="form-control form-control-sm shadow-sm" wire:model.live="filterYear" style="width: auto; font-weight: bold;">
+                                            <option value="">All Years</option>
+                                            @foreach($availableYears as $year)
+                                                <option value="{{ $year }}">{{ $year }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                </div>
                                 <ul class="list-group">
                                     @foreach($holidays as $h)
                                         @php
