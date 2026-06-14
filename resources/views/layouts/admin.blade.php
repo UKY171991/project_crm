@@ -20,6 +20,94 @@
   
   @stack('styles')
   @livewireStyles
+  <style>
+    /* Fancy Layout Enhancements */
+    body { font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f6f9; }
+    
+    /* Sidebar */
+    .fancy-sidebar {
+        background: linear-gradient(180deg, #1e1e2d 0%, #151521 100%) !important;
+        box-shadow: 4px 0 15px rgba(0,0,0,0.05) !important;
+    }
+    .fancy-sidebar .brand-link {
+        border-bottom: 1px solid rgba(255,255,255,0.05) !important;
+        padding: 1.2rem 0.5rem;
+    }
+    .fancy-sidebar .nav-sidebar .nav-item .nav-link {
+        transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        border-radius: 8px;
+        margin: 2px 12px;
+        padding: 10px 15px;
+    }
+    .fancy-sidebar .nav-sidebar .nav-item .nav-link:hover {
+        background: rgba(255,255,255,0.05);
+        transform: translateX(4px);
+    }
+    .fancy-sidebar .nav-sidebar .nav-item .nav-link.active {
+        background: linear-gradient(135deg, #3699ff 0%, #187de4 100%) !important;
+        box-shadow: 0 4px 10px rgba(54, 153, 255, 0.3) !important;
+        color: #fff !important;
+    }
+    .fancy-sidebar .nav-header {
+        letter-spacing: 1px;
+        opacity: 0.6;
+        font-size: 0.75rem;
+    }
+
+    /* Cards & Boxes */
+    .small-box {
+        border-radius: 12px !important;
+        overflow: hidden;
+        transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        border: none !important;
+        position: relative;
+        z-index: 1;
+    }
+    .small-box::before {
+        content: '';
+        position: absolute;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: linear-gradient(45deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0) 100%);
+        z-index: -1;
+    }
+    .small-box:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 12px 20px rgba(0,0,0,0.1) !important;
+    }
+    .small-box .icon > i {
+        transition: all 0.3s ease;
+    }
+    .small-box:hover .icon > i {
+        transform: scale(1.1) rotate(5deg);
+    }
+    
+    .card {
+        border-radius: 12px !important;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.03) !important;
+        border: none !important;
+        transition: all 0.3s ease;
+    }
+    .card:hover {
+        box-shadow: 0 8px 25px rgba(0,0,0,0.06) !important;
+    }
+    .card-header {
+        border-bottom: 1px solid rgba(0,0,0,0.03) !important;
+        background-color: transparent !important;
+    }
+
+    /* Gradients */
+    .bg-gradient-warning-custom { background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%) !important; color: #fff; }
+    .bg-gradient-success-custom { background: linear-gradient(135deg, #28a745 0%, #20c997 100%) !important; color: #fff; }
+    .bg-gradient-info-custom { background: linear-gradient(135deg, #17a2b8 0%, #3699ff 100%) !important; color: #fff; }
+    .bg-gradient-danger-custom { background: linear-gradient(135deg, #f64e60 0%, #dc3545 100%) !important; color: #fff; }
+    .bg-gradient-secondary-custom { background: linear-gradient(135deg, #6c757d 0%, #495057 100%) !important; color: #fff; }
+    .bg-gradient-primary-custom { background: linear-gradient(135deg, #6610f2 0%, #6f42c1 100%) !important; color: #fff; }
+    .bg-gradient-teal-custom { background: linear-gradient(135deg, #20c997 0%, #17a2b8 100%) !important; color: #fff; }
+    .bg-gradient-olive-custom { background: linear-gradient(135deg, #4caf50 0%, #8bc34a 100%) !important; color: #fff; }
+    .bg-gradient-maroon-custom { background: linear-gradient(135deg, #d81b60 0%, #e91e63 100%) !important; color: #fff; }
+    .bg-gradient-purple-custom { background: linear-gradient(135deg, #6f42c1 0%, #e83e8c 100%) !important; color: #fff; }
+    .bg-gradient-orange-custom { background: linear-gradient(135deg, #fd7e14 0%, #ff9800 100%) !important; color: #fff; }
+  </style>
 </head>
 <body class="hold-transition sidebar-mini">
 <!-- Site wrapper -->
@@ -46,11 +134,7 @@
         </div>
       </li>
       
-      <li class="nav-item d-flex align-items-center">
-        @if(!auth()->user()->hasRole('client'))
-          @livewire('user-work-tracker')
-        @endif
-      </li>
+
       
       <!-- Notifications Dropdown Menu -->
       <li class="nav-item dropdown">
@@ -92,7 +176,7 @@
   <!-- /.navbar -->
 
   <!-- Main Sidebar Container -->
-  <aside class="main-sidebar sidebar-dark-primary elevation-4">
+  <aside class="main-sidebar sidebar-dark-primary elevation-4 fancy-sidebar">
     <!-- Brand Logo -->
     <a href="{{ route('dashboard') }}" class="brand-link">
       @if(!empty($systemSettings['system_logo']))
@@ -114,18 +198,21 @@
             </a>
           </li>
           <li class="nav-item">
-            <a href="{{ route('attendance.index') }}" class="nav-link {{ request()->routeIs('attendance.*') ? 'active' : '' }}">
-              <i class="nav-icon fas fa-clock"></i>
-              <p>Attendance</p>
+            <a href="{{ route('clients.non-clients') }}" class="nav-link {{ request()->routeIs('clients.non-clients') ? 'active' : '' }}">
+              <i class="nav-icon fas fa-user-friends"></i>
+              <p>Non-Clients</p>
+            </a>
+          </li>
+
+
+
+          <li class="nav-item">
+            <a href="{{ route('websites.index') }}" class="nav-link {{ request()->routeIs('websites.*') ? 'active' : '' }}">
+              <i class="nav-icon fas fa-globe"></i>
+              <p>Websites</p>
             </a>
           </li>
           @if(!auth()->user()->hasRole('client'))
-          <li class="nav-item">
-            <a href="{{ route('screenshots.index') }}" class="nav-link {{ request()->routeIs('screenshots.*') ? 'active' : '' }}">
-              <i class="nav-icon fas fa-camera"></i>
-              <p>Screenshots</p>
-            </a>
-          </li>
           <li class="nav-item">
             <a href="{{ route('projects.index') }}" class="nav-link {{ request()->routeIs('projects.*') ? 'active' : '' }}">
               <i class="nav-icon fas fa-tasks"></i>
@@ -133,11 +220,18 @@
             </a>
           </li>
           @endif
+
           @if(auth()->user()->hasRole('master') || auth()->user()->hasRole('admin'))
           <li class="nav-item">
             <a href="{{ route('expenses.index') }}" class="nav-link {{ request()->routeIs('expenses.*') ? 'active' : '' }}">
               <i class="nav-icon fas fa-receipt"></i>
               <p>Expenses</p>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="{{ route('loans.index') }}" class="nav-link {{ request()->routeIs('loans.*') ? 'active' : '' }}">
+              <i class="nav-icon fas fa-hand-holding-usd"></i>
+              <p>Loans</p>
             </a>
           </li>
           @endif
@@ -153,11 +247,14 @@
           @if(Auth::user()->hasRole('master') || Auth::user()->hasRole('admin'))
           <li class="nav-header">ADMINISTRATION</li>
           <li class="nav-item">
-            <a href="{{ route('clients.index') }}" class="nav-link {{ request()->routeIs('clients.*') ? 'active' : '' }}">
+            <a href="{{ route('clients.index') }}" class="nav-link {{ request()->routeIs('clients.index') ? 'active' : '' }}">
               <i class="nav-icon fas fa-users"></i>
               <p>Clients</p>
             </a>
           </li>
+
+
+
           <li class="nav-item">
             <a href="{{ route('users.index') }}" class="nav-link {{ request()->routeIs('users.*') ? 'active' : '' }}">
               <i class="nav-icon fas fa-user-cog"></i>
@@ -174,6 +271,12 @@
             <a href="{{ route('hr.index') }}" class="nav-link {{ request()->routeIs('hr.*') ? 'active' : '' }}">
               <i class="nav-icon fas fa-file-invoice-dollar"></i>
               <p>HR & Salary</p>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="{{ route('whatsapp.settings') }}" class="nav-link {{ request()->routeIs('whatsapp.settings') ? 'active' : '' }}">
+              <i class="nav-icon fab fa-whatsapp"></i>
+              <p>WhatsApp Settings</p>
             </a>
           </li>
           @endif

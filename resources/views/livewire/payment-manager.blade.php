@@ -18,7 +18,7 @@
             <div class="card-tools">
                 <div class="d-flex align-items-center gap-2">
                     <!-- Month Filter -->
-                    <select class="form-control form-control-sm" wire:model="selectedMonth" style="width: 150px;">
+                    <select class="form-control form-control-sm" wire:model.live="selectedMonth" style="width: 150px;">
                         <option value="">All Months</option>
                         @foreach($availableMonths as $month)
                             <option value="{{ $month }}">{{ Carbon::parse($month . '-01')->format('M Y') }}</option>

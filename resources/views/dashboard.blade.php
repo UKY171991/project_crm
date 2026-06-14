@@ -29,9 +29,9 @@
 
     <!-- Small boxes (Stat box) -->
     <div class="row">
-        <div class="col-lg-3 col-6">
+        <div class="col-lg col-md-4 col-6">
             <!-- small box -->
-            <div class="small-box bg-warning shadow-sm">
+            <div class="small-box bg-gradient-warning-custom shadow-sm">
                 <div class="inner">
                     <h3>{{ $stats['pending_projects'] }}</h3>
                     <p>Pending Projects</p>
@@ -42,9 +42,9 @@
                 <a href="{{ route('projects.index') }}" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
             </div>
         </div>
-        <div class="col-lg-3 col-6">
+        <div class="col-lg col-md-4 col-6">
             <!-- small box -->
-            <div class="small-box bg-success shadow-sm">
+            <div class="small-box bg-gradient-success-custom shadow-sm">
                 <div class="inner">
                     <h3>{{ $stats['running_projects'] }}</h3>
                     <p>Running Projects</p>
@@ -55,12 +55,12 @@
                 <a href="{{ route('projects.index') }}" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
             </div>
         </div>
-        <div class="col-lg-3 col-6">
+        <div class="col-lg col-md-4 col-6">
             <!-- small box -->
-            <div class="small-box bg-info shadow-sm">
+            <div class="small-box bg-gradient-info-custom shadow-sm">
                 <div class="inner">
                     <h3>{{ $stats['completed_projects'] }}</h3>
-                    <p>Completed Projects</p>
+                    <p>Completed Tasks</p>
                 </div>
                 <div class="icon">
                     <i class="fas fa-check-double"></i>
@@ -68,9 +68,22 @@
                 <a href="{{ route('projects.index') }}" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
             </div>
         </div>
-        <div class="col-lg-3 col-6">
+        <div class="col-lg col-md-4 col-6">
             <!-- small box -->
-            <div class="small-box bg-secondary shadow-sm">
+            <div class="small-box bg-gradient-danger-custom shadow-sm">
+                <div class="inner">
+                    <h3>{{ $stats['pending_payment_projects'] }}</h3>
+                    <p>Pending Payment Projects</p>
+                </div>
+                <div class="icon">
+                    <i class="fas fa-money-bill-wave"></i>
+                </div>
+                <a href="{{ route('projects.index') }}" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
+            </div>
+        </div>
+        <div class="col-lg col-md-4 col-6">
+            <!-- small box -->
+            <div class="small-box bg-gradient-secondary-custom shadow-sm">
                 <div class="inner">
                     <h3>{{ $stats['canceled_projects'] }}</h3>
                     <p>Canceled Projects</p>
@@ -86,23 +99,11 @@
 
     @if(!auth()->user()->hasRole('client'))
     <div class="row">
-        <div class="col-lg-3 col-6">
-            <!-- small box -->
-            <div class="small-box bg-indigo shadow-sm">
-                <div class="inner">
-                    <h3>{{ $stats['today_work_hours'] }}</h3>
-                    <p>Today's Work</p>
-                </div>
-                <div class="icon">
-                    <i class="fas fa-user-clock"></i>
-                </div>
-                <a href="{{ route('attendance.index') }}" class="small-box-footer">View Logs <i class="fas fa-arrow-circle-right"></i></a>
-            </div>
-        </div>
+
         @if(auth()->user()->hasRole('master') || auth()->user()->hasRole('admin'))
-        <div class="col-lg-3 col-6">
+        <div class="col-lg col-md-4 col-6">
             <!-- small box -->
-            <div class="small-box bg-primary shadow-sm">
+            <div class="small-box bg-gradient-primary-custom shadow-sm">
                 <div class="inner">
                     <h3>{{ $stats['total_clients'] }}</h3>
                     <p>Total Clients</p>
@@ -113,9 +114,22 @@
                 <a href="{{ route('clients.index') }}" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
             </div>
         </div>
-        <div class="col-lg-3 col-6">
+        <div class="col-lg col-md-4 col-6">
             <!-- small box -->
-            <div class="small-box bg-teal shadow-sm">
+            <div class="small-box bg-gradient-info-custom shadow-sm">
+                <div class="inner">
+                    <h3>{{ $stats['total_non_clients'] }}</h3>
+                    <p>Non-Clients / Leads</p>
+                </div>
+                <div class="icon">
+                    <i class="fas fa-user-friends"></i>
+                </div>
+                <a href="{{ route('clients.non-clients') }}" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
+            </div>
+        </div>
+        <div class="col-lg col-md-4 col-6">
+            <!-- small box -->
+            <div class="small-box bg-gradient-teal-custom shadow-sm">
                 <div class="inner">
                     <h3>{{ $stats['total_users'] }}</h3>
                     <p>Team Members</p>
@@ -131,79 +145,109 @@
     @endif
 
     @if(!auth()->user()->hasRole('user'))
+    <h5 class="mb-3 mt-4 text-muted font-weight-bold"><i class="fas fa-calendar-alt mr-1"></i> Financial Summary ({{ $selectedMonth ? date('F', mktime(0, 0, 0, $selectedMonth, 10)) : 'All Months' }} {{ $selectedYear }})</h5>
     <div class="row">
         <div class="col-lg col-md-4 col-6">
-            <!-- small box -->
-            <div class="small-box bg-olive shadow-sm">
+            <div class="small-box bg-gradient-olive-custom shadow-sm">
                 <div class="inner">
-                    <h3 style="font-size: 1.1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{{ $stats['total_revenue'] }}">
-                        {{ $stats['total_revenue'] }}
-                    </h3>
+                    <h3 style="font-size: 1.1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{{ $stats['total_revenue'] }}">{{ $stats['total_revenue'] }}</h3>
                     <p>Total Income</p>
                 </div>
-                <div class="icon">
-                    <i class="fas fa-money-bill-wave"></i>
-                </div>
+                <div class="icon"><i class="fas fa-money-bill-wave"></i></div>
                 <a href="{{ route('payments.index') }}" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
             </div>
         </div>
         <div class="col-lg col-md-4 col-6">
-            <!-- small box -->
-            <div class="small-box bg-maroon shadow-sm">
+            <div class="small-box bg-gradient-maroon-custom shadow-sm">
                 <div class="inner">
-                    <h3 style="font-size: 1.1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{{ $stats['total_expense'] }}">
-                        {{ $stats['total_expense'] }}
-                    </h3>
+                    <h3 style="font-size: 1.1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{{ $stats['total_expense'] }}">{{ $stats['total_expense'] }}</h3>
                     <p>Total Expenses</p>
                 </div>
-                <div class="icon">
-                    <i class="fas fa-shopping-cart"></i>
-                </div>
+                <div class="icon"><i class="fas fa-shopping-cart"></i></div>
                 <a href="{{ route('expenses.index') }}" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
             </div>
         </div>
         <div class="col-lg col-md-4 col-6">
-            <!-- small box -->
-            <div class="small-box bg-purple shadow-sm">
+            <div class="small-box bg-gradient-purple-custom shadow-sm">
                 <div class="inner">
-                    <h3 style="font-size: 1.1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{{ $stats['total_profit'] }}">
-                        {{ $stats['total_profit'] }}
-                    </h3>
+                    <h3 style="font-size: 1.1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{{ $stats['total_profit'] }}">{{ $stats['total_profit'] }}</h3>
                     <p>Total Net Profit</p>
                 </div>
-                <div class="icon">
-                    <i class="fas fa-chart-line"></i>
-                </div>
+                <div class="icon"><i class="fas fa-chart-line"></i></div>
                 <div class="small-box-footer" style="min-height: 30px;">&nbsp;</div>
             </div>
         </div>
         <div class="col-lg col-md-4 col-6">
-            <!-- small box -->
-            <div class="small-box bg-danger shadow-sm">
+            <div class="small-box bg-gradient-danger-custom shadow-sm">
                 <div class="inner">
-                    <h3 style="font-size: 1.1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{{ $stats['total_pending'] }}">
-                        {{ $stats['total_pending'] }}
-                    </h3>
+                    <h3 style="font-size: 1.1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{{ $stats['total_pending'] }}">{{ $stats['total_pending'] }}</h3>
                     <p>Pending Payment</p>
                 </div>
-                <div class="icon">
-                    <i class="fas fa-hourglass-half"></i>
-                </div>
+                <div class="icon"><i class="fas fa-hourglass-half"></i></div>
                 <div class="small-box-footer" style="min-height: 30px;">&nbsp;</div>
             </div>
         </div>
         <div class="col-lg col-md-4 col-6">
-            <!-- small box -->
-            <div class="small-box bg-orange shadow-sm">
+            <div class="small-box bg-gradient-orange-custom shadow-sm">
                 <div class="inner">
-                    <h3 style="font-size: 1.1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{{ $stats['total_pending_expense'] }}">
-                        {{ $stats['total_pending_expense'] }}
-                    </h3>
+                    <h3 style="font-size: 1.1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{{ $stats['total_pending_expense'] }}">{{ $stats['total_pending_expense'] }}</h3>
                     <p>Pending Expense</p>
                 </div>
-                <div class="icon">
-                    <i class="fas fa-file-invoice-dollar"></i>
+                <div class="icon"><i class="fas fa-file-invoice-dollar"></i></div>
+                <a href="{{ route('expenses.index') }}" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
+            </div>
+        </div>
+    </div>
+
+    <h5 class="mb-3 mt-4 text-muted font-weight-bold"><i class="fas fa-infinity mr-1"></i> Financial Summary (All Time)</h5>
+    <div class="row">
+        <div class="col-lg col-md-4 col-6">
+            <div class="small-box bg-gradient-olive-custom shadow-sm">
+                <div class="inner">
+                    <h3 style="font-size: 1.1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{{ $allTimeStats['total_revenue'] }}">{{ $allTimeStats['total_revenue'] }}</h3>
+                    <p>Total Income</p>
                 </div>
+                <div class="icon"><i class="fas fa-money-bill-wave"></i></div>
+                <a href="{{ route('payments.index') }}" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
+            </div>
+        </div>
+        <div class="col-lg col-md-4 col-6">
+            <div class="small-box bg-gradient-maroon-custom shadow-sm">
+                <div class="inner">
+                    <h3 style="font-size: 1.1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{{ $allTimeStats['total_expense'] }}">{{ $allTimeStats['total_expense'] }}</h3>
+                    <p>Total Expenses</p>
+                </div>
+                <div class="icon"><i class="fas fa-shopping-cart"></i></div>
+                <a href="{{ route('expenses.index') }}" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
+            </div>
+        </div>
+        <div class="col-lg col-md-4 col-6">
+            <div class="small-box bg-gradient-purple-custom shadow-sm">
+                <div class="inner">
+                    <h3 style="font-size: 1.1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{{ $allTimeStats['total_profit'] }}">{{ $allTimeStats['total_profit'] }}</h3>
+                    <p>Total Net Profit</p>
+                </div>
+                <div class="icon"><i class="fas fa-chart-line"></i></div>
+                <div class="small-box-footer" style="min-height: 30px;">&nbsp;</div>
+            </div>
+        </div>
+        <div class="col-lg col-md-4 col-6">
+            <div class="small-box bg-gradient-danger-custom shadow-sm">
+                <div class="inner">
+                    <h3 style="font-size: 1.1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{{ $allTimeStats['total_pending'] }}">{{ $allTimeStats['total_pending'] }}</h3>
+                    <p>Pending Payment</p>
+                </div>
+                <div class="icon"><i class="fas fa-hourglass-half"></i></div>
+                <div class="small-box-footer" style="min-height: 30px;">&nbsp;</div>
+            </div>
+        </div>
+        <div class="col-lg col-md-4 col-6">
+            <div class="small-box bg-gradient-orange-custom shadow-sm">
+                <div class="inner">
+                    <h3 style="font-size: 1.1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{{ $allTimeStats['total_pending_expense'] }}">{{ $allTimeStats['total_pending_expense'] }}</h3>
+                    <p>Pending Expense</p>
+                </div>
+                <div class="icon"><i class="fas fa-file-invoice-dollar"></i></div>
                 <a href="{{ route('expenses.index') }}" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
             </div>
         </div>
@@ -211,19 +255,33 @@
     @endif
 
     <div class="row">
-        <!-- Revenue Chart -->
+        <!-- Revenue Charts -->
         @if(!auth()->user()->hasRole('user'))
         <div class="col-md-8">
-            <div class="card card-outline card-primary shadow-sm border-0">
+            <div class="card card-outline card-primary shadow-sm border-0 mb-3">
                 <div class="card-header border-0 pb-0">
                     <h3 class="card-title font-weight-bold">
                         <i class="fas fa-chart-bar mr-1 text-primary"></i>
-                        Monthly Income vs Expense
+                        Monthly Income vs Expense ({{ $selectedYear }})
                     </h3>
                 </div>
                 <div class="card-body">
                     <div class="chart">
                         <canvas id="incomeExpenseChart" style="min-height: 250px; height: 250px; max-height: 250px; max-width: 100%;"></canvas>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card card-outline card-success shadow-sm border-0">
+                <div class="card-header border-0 pb-0">
+                    <h3 class="card-title font-weight-bold">
+                        <i class="fas fa-chart-area mr-1 text-success"></i>
+                        All Time Yearly Comparison
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <div class="chart">
+                        <canvas id="atYearlyChart" style="min-height: 250px; height: 250px; max-height: 250px; max-width: 100%;"></canvas>
                     </div>
                 </div>
             </div>
@@ -236,7 +294,7 @@
                 <div class="card-header border-0 pb-0">
                     <h3 class="card-title font-weight-bold">
                         <i class="fas fa-chart-pie mr-1 text-info"></i>
-                        Project Status
+                        Project Status Summary
                     </h3>
                 </div>
                 <div class="card-body">
@@ -279,7 +337,7 @@
                                </td>
                                <td>{{ $project->client->company_name ?? 'N/A' }}</td>
                                <td>
-                                    <span class="badge {{ $project->status == 'Running' ? 'badge-success' : ($project->status == 'Pending' ? 'badge-warning' : 'badge-secondary') }}">
+                                    <span class="badge {{ $project->status == 'Running' ? 'badge-success' : ($project->status == 'Pending' ? 'badge-warning' : ($project->status == 'Pending Payment' ? 'badge-info' : 'badge-secondary')) }}">
                                         {{ $project->status }}
                                     </span>
                                </td>
@@ -353,6 +411,61 @@
                 </div>
             </div>
             @endif
+            <!-- Scheduled Calls -->
+            @if(auth()->user()->hasRole('master') || auth()->user()->hasRole('admin'))
+            <div class="card card-outline card-warning shadow-sm border-0 mt-3">
+                <div class="card-header border-0 pb-0">
+                    <h3 class="card-title font-weight-bold">
+                        <i class="fas fa-phone-volume mr-1 text-warning"></i>
+                        Upcoming Scheduled Calls
+                    </h3>
+                </div>
+                <div class="card-body p-0 table-responsive">
+                   <table class="table table-striped table-valign-middle mb-0">
+                       <thead class="bg-light">
+                           <tr class="small text-muted text-uppercase">
+                               <th class="pl-3" style="width: 5%">Sr.</th>
+                               <th>Date & Time</th>
+                               <th>Client</th>
+                               <th>Status/Note</th>
+                           </tr>
+                       </thead>
+                       <tbody>
+                           @forelse($scheduledCalls as $call)
+                           <tr>
+                               <td class="pl-3">{{ $loop->iteration }}</td>
+                               <td>
+                                    @php
+                                        $sched = \Carbon\Carbon::parse($call->next_schedule);
+                                        $isPast = $sched->isPast();
+                                        $isToday = $sched->isToday();
+                                    @endphp
+                                    <span class="font-weight-bold {{ $isPast ? 'text-danger' : ($isToday ? 'text-warning' : 'text-primary') }}">
+                                        {{ $sched->format('d M Y, h:i A') }}
+                                    </span>
+                               </td>
+                               <td>
+                                   <span class="font-weight-bold d-block">{{ $call->client->company_name ?? 'N/A' }}</span>
+                                   <small class="text-muted">{{ $call->client->phone ?? 'No Phone' }}</small>
+                               </td>
+                               <td>
+                                   <span class="badge badge-info mb-1">{{ $call->status }}</span>
+                                   <small class="d-block text-muted text-truncate" style="max-width: 250px;">{{ $call->feedback }}</small>
+                               </td>
+                           </tr>
+                           @empty
+                           <tr>
+                               <td colspan="4" class="text-center text-muted py-5">
+                                   <i class="fas fa-calendar-check fa-2x mb-3 d-block"></i>
+                                   No upcoming calls scheduled.
+                                </td>
+                           </tr>
+                           @endforelse
+                       </tbody>
+                   </table>
+                </div>
+            </div>
+            @endif
         </section>
         
         <!-- Right col -->
@@ -400,7 +513,9 @@
                         </button>
                     </form>
                     
-                    @if(auth()->user()->hasRole('master'))
+
+                    
+                    @if(auth()->user()->hasRole('master') || auth()->user()->hasRole('admin'))
                     <form action="{{ route('system.clear-cache') }}" method="POST" class="mb-2">
                         @csrf
                         <button type="submit" class="btn btn-block btn-light text-left border py-2" onclick="return confirm('Clear all system cache?')">
@@ -409,10 +524,12 @@
                     </form>
                     <form action="{{ route('system.run-migration') }}" method="POST" class="mb-2">
                         @csrf
-                        <button type="submit" class="btn btn-block btn-light text-left border py-2" onclick="return confirm('Run database migrations? This will attempt to update the database schema.')">
+                        <button type="submit" class="btn btn-block btn-light text-left border py-2" onclick="return confirm('Run database migrations? This will attempt to update the database schema without losing existing data.')">
                             <i class="fas fa-database mr-2 text-danger"></i> Run Database Migrations
                         </button>
                     </form>
+                    @endif
+                    @if(auth()->user()->hasRole('master'))
                     <form action="{{ route('system.composer-update') }}" method="POST">
                         @csrf
                         <button type="submit" class="btn btn-block btn-light text-left border py-2" onclick="return confirm('Run composer update? This may take several minutes.')">
@@ -420,6 +537,69 @@
                         </button>
                     </form>
                     @endif
+                </div>
+            </div>
+            @endif
+            
+            @if(auth()->user()->hasRole('master') || auth()->user()->hasRole('admin'))
+            <div class="card bg-gradient-info shadow-sm border-0">
+                <div class="card-header border-0">
+                    <h3 class="card-title font-weight-bold">
+                        <i class="fas fa-clock mr-1"></i>
+                        Cron Job Setup
+                    </h3>
+                </div>
+                <div class="card-body small py-3">
+                    <p class="mb-3 text-white-50"><strong>Option 1: Server Crontab (Recommended)</strong></p>
+                    <div class="mb-3">
+                        <strong class="d-block mb-1">Command (run every minute):</strong>
+                        <div class="input-group input-group-sm">
+                            <input type="text" class="form-control form-control-sm bg-white font-monospace" readonly 
+                                   value="* * * * * cd {{ base_path() }} && php artisan schedule:run >> /dev/null 2>&1" 
+                                   id="cronCommand">
+                            <div class="input-group-append">
+                                <button class="btn btn-light btn-sm" type="button" onclick="copyToClipboard('cronCommand')">
+                                    <i class="fas fa-copy"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <small class="text-white-50 d-block mt-1">This runs Laravel scheduler which executes all scheduled tasks including inactive session check every 5 minutes</small>
+                    </div>
+                    
+                    <hr class="bg-white-50">
+                    
+                    <p class="mb-3 text-white-50 mt-3"><strong>Option 2: External Cron Service URLs</strong></p>
+                    <small class="text-white-50 d-block mb-2">Use these URLs with external cron services (set to run every 5 minutes):</small>
+                    
+
+                    
+                    <div class="mb-3">
+                        <strong class="d-block mb-1">Run All Scheduled Tasks:</strong>
+                        <div class="input-group input-group-sm">
+                            <input type="text" class="form-control form-control-sm bg-white" readonly 
+                                   value="{{ url('/cron/run-scheduler?cron_key=' . \App\Models\Setting::get('cron_key', 'crm_tasks_cron_2026')) }}" 
+                                   id="cronSchedulerUrl">
+                            <div class="input-group-append">
+                                <button class="btn btn-light btn-sm" type="button" onclick="copyToClipboard('cronSchedulerUrl')">
+                                    <i class="fas fa-copy"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-0">
+                        <strong class="d-block mb-1">Pending Tasks Email:</strong>
+                        <div class="input-group input-group-sm">
+                            <input type="text" class="form-control form-control-sm bg-white" readonly 
+                                   value="{{ url('/cron/pending-tasks?cron_key=' . \App\Models\Setting::get('cron_key', 'crm_tasks_cron_2026')) }}" 
+                                   id="cronEmailUrl">
+                            <div class="input-group-append">
+                                <button class="btn btn-light btn-sm" type="button" onclick="copyToClipboard('cronEmailUrl')">
+                                    <i class="fas fa-copy"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
             @endif
@@ -441,6 +621,23 @@
     </div>
 
     @push('scripts')
+    <script>
+        function copyToClipboard(elementId) {
+            var copyText = document.getElementById(elementId);
+            copyText.select();
+            copyText.setSelectionRange(0, 99999);
+            document.execCommand("copy");
+            
+            // Show feedback
+            var btn = event.target.closest('button');
+            var originalHtml = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-check"></i>';
+            setTimeout(function() {
+                btn.innerHTML = originalHtml;
+            }, 1500);
+        }
+    </script>
+
     <script>
         $(function () {
             // Income vs Expense Bar Chart
@@ -486,6 +683,30 @@
                 type: 'bar',
                 data: barData,
                 options: barOptions
+            })
+
+            // All Time Yearly Chart
+            var atCanvas = $('#atYearlyChart').get(0).getContext('2d')
+            var atData = {
+                labels  : {!! $atLabels !!},
+                datasets: {!! $atDatasets !!}
+            }
+            new Chart(atCanvas, {
+                type: 'line', // Line chart looks good for yearly trends
+                data: atData,
+                options: {
+                    maintainAspectRatio : false,
+                    responsive : true,
+                    tension: 0.3, // Curve the lines
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) { return value.toLocaleString(); }
+                            }
+                        }
+                    }
+                }
             })
 
             // Status Chart

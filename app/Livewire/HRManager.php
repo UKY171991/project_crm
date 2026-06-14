@@ -180,9 +180,12 @@ class HRManager extends Component
     public function render()
     {
         return view('livewire.h-r-manager', [
-            'users' => User::whereHas('role', function($q) {
-                $q->whereIn('slug', ['master', 'admin', 'user']);
-            })->get(),
+            'users' => User::with('role')
+                ->whereHas('role', function($q) {
+                    $q->whereIn('slug', ['master', 'admin', 'user']);
+                })
+                ->orderBy('name', 'asc')
+                ->get(),
             'salaries' => UserSalary::with('user')->get(),
             'holidays' => Holiday::orderBy('date', 'desc')->get(),
         ]);

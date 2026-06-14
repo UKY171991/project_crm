@@ -11,6 +11,7 @@ use App\Models\ProjectRemark;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Auth;
+use App\Services\WhatsAppService;
 
 class ProjectDetailManager extends Component
 {
@@ -36,6 +37,11 @@ class ProjectDetailManager extends Component
         $this->project = $project;
         // Initialize with current status
         $this->requested_status = $project->status;
+    }
+
+    protected function whatsapp(): WhatsAppService
+    {
+        return new WhatsAppService();
     }
 
     public function render()
@@ -69,36 +75,58 @@ class ProjectDetailManager extends Component
     public function requestStatusChange()
     {
         if (Auth::user()->hasRole('master') || Auth::user()->hasRole('admin')) {
-            // Direct update for admin/master
-            $this->project->status = $this->requested_status;
-            $this->project->save();
-            session()->flash('success', 'Project status updated successfully.');
+            // Use exactly the status the user selected
+            $newStatus = $this->requested_status;
+
+            $oldStatus = $this->project->status;
+
+            // Direct DB update — guaranteed to persist
+            Project::where('id', $this->project->id)->update(['status' => $newStatus]);
+
+            // Reload project for WhatsApp notification
+            $updatedProject = Project::with('client')->findOrFail($this->project->id);
+
+            // Send WhatsApp notification to client
+            if ($updatedProject->client && $updatedProject->client->phone) {
+                $this->whatsapp()->sendProjectStatusUpdate(
+                    $updatedProject->client,
+                    $updatedProject,
+                    $oldStatus,
+                    $newStatus
+                );
+            }
+
+            // Redirect to reload page fresh from DB
+            session()->flash('success', 'Project status updated to "' . $newStatus . '" successfully.');
+            return redirect()->route('projects.show', $this->project->id);
+
         } else {
-            // Create request for user
-            if ($this->requested_status == $this->project->status) {
+            // Non-admin: create a status change request
+            if ($this->requested_status === $this->project->status) {
                 return;
             }
-            
+
             \App\Models\ProjectStatusChange::create([
                 'project_id' => $this->project->id,
-                'user_id' => Auth::id(),
+                'user_id'    => Auth::id(),
                 'old_status' => $this->project->status,
                 'new_status' => $this->requested_status,
-                'status' => 'pending'
+                'status'     => 'pending'
             ]);
 
             // Notify Master and Admins
             $admins = User::whereHas('role', function($q) {
                 $q->whereIn('slug', ['master', 'admin']);
             })->get();
-            
+
             \Illuminate\Support\Facades\Notification::send($admins, new \App\Notifications\ProjectStatusChangedNotification(
                 $this->project,
                 'New status change request for project: ' . $this->project->title . ' (by ' . Auth::user()->name . ')',
                 route('projects.show', $this->project->id)
             ));
-            
+
             session()->flash('success', 'Status change request submitted for approval.');
+            return redirect()->route('projects.show', $this->project->id);
         }
     }
 
@@ -109,29 +137,44 @@ class ProjectDetailManager extends Component
         }
 
         $change = \App\Models\ProjectStatusChange::findOrFail($changeId);
-        
-        // Update project status
-        $this->project->status = $change->new_status;
-        $this->project->save();
-        
+
+        // Use exactly the status from the approved request
+        $newStatus = $change->new_status;
+        $oldStatus = $this->project->status;
+
+        // Direct DB update — guaranteed to persist
+        Project::where('id', $this->project->id)->update(['status' => $newStatus]);
+
         // Mark request as approved
         $change->update([
-            'status' => 'approved',
+            'status'       => 'approved',
             'processed_by' => Auth::id(),
             'processed_at' => now()
         ]);
-        
+
+        // Reload for notifications
+        $updatedProject = Project::with('client')->findOrFail($this->project->id);
+
+        // Send WhatsApp notification to client
+        if ($updatedProject->client && $updatedProject->client->phone) {
+            $this->whatsapp()->sendProjectStatusUpdate(
+                $updatedProject->client,
+                $updatedProject,
+                $oldStatus,
+                $newStatus
+            );
+        }
+
         // Notification to the requester
         $change->user->notify(new \App\Notifications\ProjectStatusChangedNotification(
-            $this->project,
-            'Your status change request for project ' . $this->project->title . ' was APPROVED.',
-            route('projects.show', $this->project->id)
+            $updatedProject,
+            'Your status change request for project ' . $updatedProject->title . ' was APPROVED.',
+            route('projects.show', $updatedProject->id)
         ));
-        
-        // Sync the component property
-        $this->requested_status = $this->project->status;
-        
-        session()->flash('success', 'Status change approved.');
+
+        // Redirect to reload page fresh from DB
+        session()->flash('success', 'Status change approved. Project is now "' . $newStatus . '".');
+        return redirect()->route('projects.show', $this->project->id);
     }
 
     public function rejectStatusChange($changeId)
@@ -157,6 +200,70 @@ class ProjectDetailManager extends Component
         ));
         
         session()->flash('success', 'Status change rejected.');
+    }
+
+    public function sendManualNotification()
+    {
+        if (!Auth::user()->hasRole('master') && !Auth::user()->hasRole('admin')) {
+            abort(403);
+        }
+
+        $project = Project::with('client')->findOrFail($this->project->id);
+        $client = $project->client;
+
+        if (!$client) {
+            session()->flash('error', 'Client information not found.');
+            return;
+        }
+
+        $whatsappSent = false;
+        $email = $client->user ? $client->user->email : $client->email;
+        $emailSent = false;
+
+        // Ensure we have current data
+        $project->refresh();
+
+        // 1. Send WhatsApp if phone exists
+        if ($client->phone) {
+            $whatsappSent = $this->whatsapp()->sendProjectStatusUpdate(
+                $client,
+                $project,
+                $project->status, 
+                $project->status
+            );
+        }
+
+        // 2. Send Email if email exists
+        if ($email) {
+            $messageBody = "Your project '{$project->title}' is currently '{$project->status}'.";
+            $actionUrl = route('projects.show', $project->id);
+            
+            // If the client has a user account
+            if ($client->user) {
+                $client->user->notify(new \App\Notifications\ProjectStatusChangedNotification(
+                    $project,
+                    $messageBody,
+                    $actionUrl
+                ));
+                $emailSent = true;
+            } else {
+                // Otherwise fallback to a standard notification if possible
+                // For simplicity, we assume they have a user or email
+                \Illuminate\Support\Facades\Notification::route('mail', $email)
+                    ->notify(new \App\Notifications\ProjectStatusChangedNotification($project, $messageBody, $actionUrl));
+                $emailSent = true;
+            }
+        }
+
+        if ($whatsappSent && $emailSent) {
+            session()->flash('success', 'Status notification sent via both WhatsApp and Email.');
+        } elseif ($whatsappSent) {
+            session()->flash('success', 'Status notification sent via WhatsApp.');
+        } elseif ($emailSent) {
+            session()->flash('success', 'Status notification sent via Email.');
+        } else {
+            session()->flash('error', 'No contact information available (Email or WhatsApp).');
+        }
     }
 
     public function addRemark()

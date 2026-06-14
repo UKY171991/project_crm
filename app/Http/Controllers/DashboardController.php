@@ -38,335 +38,222 @@ class DashboardController extends Controller
         $stats['total_projects'] = (clone $baseQuery)->count();
         $stats['running_projects'] = (clone $baseQuery)->where('status', 'Running')->count();
         $stats['pending_projects'] = (clone $baseQuery)->where('status', 'Pending')->count();
+        $stats['pending_payment_projects'] = (clone $baseQuery)->where('status', 'Pending Payment')->count();
         $stats['completed_projects'] = (clone $baseQuery)->where('status', 'Completed')->count();
         $stats['canceled_projects'] = (clone $baseQuery)->where('status', 'Canceled')->count();
         
         if ($user->hasRole('master') || $user->hasRole('admin')) {
-            $stats['total_clients'] = Client::count();
+            $stats['total_clients'] = Client::has('projects')->count();
+            $stats['total_non_clients'] = Client::doesntHave('projects')->count();
             $stats['total_users'] = User::whereHas('role', function($q){ $q->where('slug', 'user'); })->count();
         } elseif ($user->hasRole('client')) {
             $stats['total_clients'] = 1; 
+            $stats['total_non_clients'] = 0;
             $stats['total_users'] = 0;
         } else {
             $stats['total_clients'] = 0;
+            $stats['total_non_clients'] = 0;
             $stats['total_users'] = 0;
         }
 
-        // Work Hours Stat
-        $stats['today_work_hours'] = '0h 0m 0s';
-        if (!$user->hasRole('client')) {
-            $todayWorkSeconds = \App\Models\Attendance::where('user_id', $user->id)
-                ->whereDate('date', Carbon::today())
-                ->sum('total_seconds');
-            
-            $todayIdleSeconds = \App\Models\Attendance::where('user_id', $user->id)
-                ->whereDate('date', Carbon::today())
-                ->sum('idle_seconds');
-            
-            $activeSession = \App\Models\Attendance::where('user_id', $user->id)
-                ->whereNull('clock_out')
-                ->latest()
-                ->first();
-                
-            if ($activeSession) {
-                // Total until now including live active session
-                $todayWorkSeconds = \App\Models\Attendance::where('user_id', $user->id)
-                    ->whereDate('date', Carbon::today())
-                    ->sum('total_seconds');
-            }
-            
-            $netSeconds = max(0, $todayWorkSeconds - $todayIdleSeconds);
-            
-            $hours = floor($netSeconds / 3600);
-            $mins = floor(($netSeconds % 3600) / 60);
-            $secs = $netSeconds % 60;
-            
-            $stats['today_work_hours'] = sprintf('%dh %dm %ds', $hours, $mins, $secs);
-        }
-
-        // 2. Revenue Calculation (Filtered by Month/Year)
+        // 2. REVENUE / EXPENSE (FILTERED)
         $revenueQuery = Payment::whereIn('payment_status', ['Paid', 'Partial']);
         if ($year) { $revenueQuery->whereYear('payment_date', $year); }
         if ($month) { $revenueQuery->whereMonth('payment_date', $month); }
-        
         if ($user->hasRole('admin')) {
             $revenueQuery->whereHas('project', function($q) use ($user) { $q->where('created_by', $user->id); });
         } elseif ($user->hasRole('client') && $user->clientProfile) {
             $revenueQuery->whereHas('project', function($q) use ($user) { $q->where('client_id', $user->clientProfile->id); });
         }
+        $revenues = $revenueQuery->select('currency', DB::raw('sum(amount) as total'))->groupBy('currency')->get();
+        $revenueMap = $revenues->pluck('total', 'currency');
 
-        $revenues = $revenueQuery->select('currency', DB::raw('sum(amount) as total'))
-            ->groupBy('currency')
-            ->get();
-        
-        // 3. Expense Calculation (Filtered by Month/Year)
         $expenseQuery = \App\Models\Expense::where('status', 'Paid');
         if ($year) { $expenseQuery->whereYear('expense_date', $year); }
         if ($month) { $expenseQuery->whereMonth('expense_date', $month); }
-        
-        if ($user->hasRole('admin')) {
-             $expenseQuery->where('user_id', $user->id);
-        }
-        $expenses = $expenseQuery->select('currency', DB::raw('sum(amount) as total'))
-            ->groupBy('currency')
-            ->get();
-
-        $revenueMap = $revenues->pluck('total', 'currency');
+        if ($user->hasRole('admin')) { $expenseQuery->where('user_id', $user->id); }
+        $expenses = $expenseQuery->select('currency', DB::raw('sum(amount) as total'))->groupBy('currency')->get();
         $expenseMap = $expenses->pluck('total', 'currency');
+
         $currencies = $revenueMap->keys()->concat($expenseMap->keys())->unique();
-
-        $revenueStrings = [];
-        $expenseStrings = [];
-        $profitStrings = [];
-
+        $revenueStrings = []; $expenseStrings = []; $profitStrings = [];
         foreach($currencies as $curr) {
-            $rev = $revenueMap->get($curr, 0);
-            $exp = $expenseMap->get($curr, 0);
-            $profit = $rev - $exp;
-
+            $rev = $revenueMap->get($curr, 0); $exp = $expenseMap->get($curr, 0); $profit = $rev - $exp;
             if ($rev > 0) $revenueStrings[] = $curr . ' ' . number_format($rev, 0);
             if ($exp > 0) $expenseStrings[] = $curr . ' ' . number_format($exp, 0);
             $profitStrings[] = $curr . ' ' . number_format($profit, 0);
         }
-
         $stats['total_revenue'] = !empty($revenueStrings) ? implode(' / ', $revenueStrings) : '0';
         $stats['total_expense'] = !empty($expenseStrings) ? implode(' / ', $expenseStrings) : '0';
         $stats['total_profit'] = !empty($profitStrings) ? implode(' / ', $profitStrings) : '0';
 
-        // 3b. Pending Expenses Calculation
-        $pendingExpenseQuery = \App\Models\Expense::where('status', 'Pending');
-        if ($year) { $pendingExpenseQuery->whereYear('expense_date', $year); }
-        if ($month) { $pendingExpenseQuery->whereMonth('expense_date', $month); }
-        if ($user->hasRole('admin')) { $pendingExpenseQuery->where('user_id', $user->id); }
-
-        $pendingExpenses = $pendingExpenseQuery->select('currency', DB::raw('sum(amount) as total'))
-            ->groupBy('currency')
-            ->get();
-        
-        $pendingExpStrings = [];
-        foreach($pendingExpenses as $pe) {
-            if ($pe->total > 0) $pendingExpStrings[] = $pe->currency . ' ' . number_format($pe->total, 0);
-        }
-        $stats['total_pending_expense'] = !empty($pendingExpStrings) ? implode(' / ', $pendingExpStrings) : '0'; 
-
-
-        // 2b. Pending Payments (Filtered by Month/Year)
+        // 2b. PENDING (FILTERED)
         $pPendingQuery = Project::where('status', '!=', 'Canceled');
         if ($year) { $pPendingQuery->whereYear('end_date', $year); }
         if ($month) { $pPendingQuery->whereMonth('end_date', $month); }
-        
         if ($user->hasRole('admin')) $pPendingQuery->where('created_by', $user->id);
         elseif ($user->hasRole('client') && $user->clientProfile) $pPendingQuery->where('client_id', $user->clientProfile->id);
-        
         $pPendingGrouped = $pPendingQuery->get()->groupBy('currency');
         $pendingStrings = [];
         foreach($pPendingGrouped as $curr => $projs) {
              $totalBalance = $projs->sum(fn($p) => $p->balance);
-             if ($totalBalance > 0) {
-                 $pendingStrings[] = ($curr ?: 'USD') . ' ' . number_format($totalBalance, 0);
-             }
+             if ($totalBalance > 0) $pendingStrings[] = ($curr ?: 'USD') . ' ' . number_format($totalBalance, 0);
         }
         $stats['total_pending'] = !empty($pendingStrings) ? implode(' / ', $pendingStrings) : '0';
 
-        // 3. Chart Data: Monthly Income vs Expense vs Pending (Current Year or Selected Year)
-        $barLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-        $incomeData = array_fill(0, 12, 0);
-        $expenseData = array_fill(0, 12, 0);
-        $pendingData = array_fill(0, 12, 0);
-        $pendingExpData = array_fill(0, 12, 0);
+        $pExpQuery = \App\Models\Expense::where('status', 'Pending');
+        if ($year) { $pExpQuery->whereYear('expense_date', $year); }
+        if ($month) { $pExpQuery->whereMonth('expense_date', $month); }
+        if ($user->hasRole('admin')) $pExpQuery->where('user_id', $user->id);
+        $pExpenses = $pExpQuery->select('currency', DB::raw('sum(amount) as total'))->groupBy('currency')->get();
+        $pExpStrings = [];
+        foreach($pExpenses as $pe) { if ($pe->total > 0) $pExpStrings[] = $pe->currency . ' ' . number_format($pe->total, 0); }
+        $stats['total_pending_expense'] = !empty($pExpStrings) ? implode(' / ', $pExpStrings) : '0';
 
-        $chartYear = $year ?: date('Y');
 
-        for ($m = 1; $m <= 12; $m++) {
-            $startDate = Carbon::create($chartYear, $m, 1)->startOfMonth();
-            $endDate = Carbon::create($chartYear, $m, 1)->endOfMonth();
+        // 3. ALL TIME STATS
+        $allTimeStats = [];
+        $atRevQuery = Payment::whereIn('payment_status', ['Paid', 'Partial']);
+        if ($user->hasRole('admin')) { $atRevQuery->whereHas('project', function($q) use ($user) { $q->where('created_by', $user->id); }); }
+        elseif ($user->hasRole('client') && $user->clientProfile) { $atRevQuery->whereHas('project', function($q) use ($user) { $q->where('client_id', $user->clientProfile->id); }); }
+        $atRevenues = $atRevQuery->select('currency', DB::raw('sum(amount) as total'))->groupBy('currency')->get();
+        $atRevMap = $atRevenues->pluck('total', 'currency');
 
-            // Income (Paid/Partial Payments)
-            $incomeQuery = Payment::whereIn('payment_status', ['Paid', 'Partial'])
-                ->whereBetween('payment_date', [$startDate, $endDate]);
-            if ($user->hasRole('admin')) {
-                $incomeQuery->whereHas('project', function($q) use ($user) { $q->where('created_by', $user->id); });
-            } elseif ($user->hasRole('client')) {
-                $incomeQuery->whereHas('project', function($q) use ($user) { $q->where('client_id', $user->clientProfile->id); });
-            }
-            $incomeData[$m-1] = (float) $incomeQuery->sum('amount');
+        $atExpQuery = \App\Models\Expense::where('status', 'Paid');
+        if ($user->hasRole('admin')) { $atExpQuery->where('user_id', $user->id); }
+        $atExpenses = $atExpQuery->select('currency', DB::raw('sum(amount) as total'))->groupBy('currency')->get();
+        $atExpMap = $atExpenses->pluck('total', 'currency');
 
-            // Expense
-            $expQuery = \App\Models\Expense::where('status', 'Paid')->whereBetween('expense_date', [$startDate, $endDate]);
-            if ($user->hasRole('admin')) {
-                $expQuery->where('user_id', $user->id);
-            }
-            $expenseData[$m-1] = (float) $expQuery->sum('amount');
-
-            // Pending Income (Project Balances due this month)
-            $pQuery = Project::where('status', '!=', 'Canceled')->whereBetween('end_date', [$startDate, $endDate]);
-            if ($user->hasRole('admin')) {
-                $pQuery->where('created_by', $user->id);
-            } elseif ($user->hasRole('client')) {
-                $pQuery->where('client_id', $user->clientProfile->id);
-            }
-            
-            $pendingTotal = 0;
-            $projectsDue = $pQuery->get();
-            foreach($projectsDue as $proj) {
-                $pendingTotal += $proj->balance;
-            }
-            $pendingData[$m-1] = (float) $pendingTotal;
-
-            // Pending Expense
-            $pExpQuery = \App\Models\Expense::where('status', 'Pending')->whereBetween('expense_date', [$startDate, $endDate]);
-            if ($user->hasRole('admin')) {
-                $pExpQuery->where('user_id', $user->id);
-            }
-            $pendingExpData[$m-1] = (float) $pExpQuery->sum('amount');
+        $atCurrs = $atRevMap->keys()->concat($atExpMap->keys())->unique();
+        $atRevStr = []; $atExpStr = []; $atProfStr = [];
+        foreach($atCurrs as $curr) {
+            $rev = $atRevMap->get($curr, 0); $exp = $atExpMap->get($curr, 0); $profit = $rev - $exp;
+            if ($rev > 0) $atRevStr[] = $curr . ' ' . number_format($rev, 0);
+            if ($exp > 0) $atExpStr[] = $curr . ' ' . number_format($exp, 0);
+            $atProfStr[] = $curr . ' ' . number_format($profit, 0);
         }
+        $allTimeStats['total_revenue'] = !empty($atRevStr) ? implode(' / ', $atRevStr) : '0';
+        $allTimeStats['total_expense'] = !empty($atExpStr) ? implode(' / ', $atExpStr) : '0';
+        $allTimeStats['total_profit'] = !empty($atProfStr) ? implode(' / ', $atProfStr) : '0';
 
+        $atPendingQ = Project::where('status', '!=', 'Canceled');
+        if ($user->hasRole('admin')) $atPendingQ->where('created_by', $user->id);
+        elseif ($user->hasRole('client') && $user->clientProfile) $atPendingQ->where('client_id', $user->clientProfile->id);
+        $atPGrouped = $atPendingQ->get()->groupBy('currency');
+        $atPStr = [];
+        foreach($atPGrouped as $curr => $projs) {
+             $totalBalance = $projs->sum(fn($p) => $p->balance);
+             if ($totalBalance > 0) $atPStr[] = ($curr ?: 'USD') . ' ' . number_format($totalBalance, 0);
+        }
+        $allTimeStats['total_pending'] = !empty($atPStr) ? implode(' / ', $atPStr) : '0';
+
+        $atPExpQ = \App\Models\Expense::where('status', 'Pending');
+        if ($user->hasRole('admin')) $atPExpQ->where('user_id', $user->id);
+        $atPE = $atPExpQ->select('currency', DB::raw('sum(amount) as total'))->groupBy('currency')->get();
+        $atPEStr = [];
+        foreach($atPE as $pe) { if ($pe->total > 0) $atPEStr[] = $pe->currency . ' ' . number_format($pe->total, 0); }
+        $allTimeStats['total_pending_expense'] = !empty($atPEStr) ? implode(' / ', $atPEStr) : '0';
+
+        // 4. CHART DATA (MONTHLY)
+        $barLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        $incomeData = array_fill(0, 12, 0); $expenseData = array_fill(0, 12, 0);
+        $chartYear = $year ?: date('Y');
+        for ($m = 1; $m <= 12; $m++) {
+            $start = Carbon::create($chartYear, $m, 1)->startOfMonth(); $end = Carbon::create($chartYear, $m, 1)->endOfMonth();
+            $incQ = Payment::whereIn('payment_status', ['Paid', 'Partial'])->whereBetween('payment_date', [$start, $end]);
+            if ($user->hasRole('admin')) { $incQ->whereHas('project', function($q) use ($user) { $q->where('created_by', $user->id); }); }
+            $incomeData[$m-1] = (float) $incQ->sum('amount');
+            $exQ = \App\Models\Expense::where('status', 'Paid')->whereBetween('expense_date', [$start, $end]);
+            if ($user->hasRole('admin')) { $exQ->where('user_id', $user->id); }
+            $expenseData[$m-1] = (float) $exQ->sum('amount');
+        }
         $barDatasets = [
-            [
-                'label' => 'Income',
-                'backgroundColor' => '#28a745',
-                'data' => $incomeData
-            ],
-            [
-                'label' => 'Expense',
-                'backgroundColor' => '#dc3545',
-                'data' => $expenseData
-            ],
-            [
-                'label' => 'Pending Income',
-                'backgroundColor' => '#ffc107',
-                'data' => $pendingData
-            ],
-            [
-                'label' => 'Pending Expense',
-                'backgroundColor' => '#fd7e14',
-                'data' => $pendingExpData
-            ]
+            ['label' => 'Income', 'backgroundColor' => '#28a745', 'data' => $incomeData],
+            ['label' => 'Expense', 'backgroundColor' => '#dc3545', 'data' => $expenseData],
         ];
 
-        // 4. Project Status Chart Data
-        $statusCounts = ['Pending' => 0, 'Running' => 0, 'Completed' => 0, 'Canceled' => 0];
-        $pQuery = Project::query();
-        if ($user->hasRole('admin')) { $pQuery->where('created_by', $user->id); }
-        elseif ($user->hasRole('client')) { $pQuery->where('client_id', $user->clientProfile->id); }
-        elseif ($user->hasRole('user')) { $pQuery->whereHas('assignees', function($q) use ($user) { $q->where('user_id', $user->id); }); }
-
-        $counts = $pQuery->select('status', DB::raw('count(*) as total'))
-            ->groupBy('status')
-            ->pluck('total', 'status')
-            ->toArray();
-        $statusData = array_merge($statusCounts, $counts);
-
-        // 5. Recent Projects
-        $recentProjectsQuery = Project::latest()->take(5);
-        if ($user->hasRole('admin')) { $recentProjectsQuery->where('created_by', $user->id); }
-        elseif ($user->hasRole('client') && $user->clientProfile) { $recentProjectsQuery->where('client_id', $user->clientProfile->id); }
-        elseif ($user->hasRole('user')) { 
-            // Regular users see only their assigned projects
-            $recentProjectsQuery->whereHas('assignees', function($q) use ($user) { 
-                $q->where('user_id', $user->id); 
-            }); 
+        // 5. CHART DATA (YEARLY - ALL TIME)
+        $years = range(date('Y'), date('Y') - 5);
+        $atLabels = array_reverse($years);
+        $atIncData = []; $atExpData = [];
+        foreach ($atLabels as $y) {
+            $atIncQ = Payment::whereIn('payment_status', ['Paid', 'Partial'])->whereYear('payment_date', $y);
+            if ($user->hasRole('admin')) { $atIncQ->whereHas('project', function($q) use ($user) { $q->where('created_by', $user->id); }); }
+            $atIncData[] = (float) $atIncQ->sum('amount');
+            $atExQ = \App\Models\Expense::where('status', 'Paid')->whereYear('expense_date', $y);
+            if ($user->hasRole('admin')) { $atExQ->where('user_id', $user->id); }
+            $atExpData[] = (float) $atExQ->sum('amount');
         }
-        // Master sees all projects (no filter)
-        $recentProjects = $recentProjectsQuery->get();
+        $atDatasets = [
+            ['label' => 'Income', 'backgroundColor' => '#28a745', 'data' => $atIncData],
+            ['label' => 'Expense', 'backgroundColor' => '#dc3545', 'data' => $atExpData],
+        ];
 
-        // 6. Recent Transactions (Payments) - Only for Master & Admin
+        // 6. Project Status / Recent Items
+        $pStatusQ = Project::query();
+        if ($user->hasRole('admin')) { $pStatusQ->where('created_by', $user->id); }
+        $statusCounts = $pStatusQ->select('status', DB::raw('count(*) as total'))->groupBy('status')->pluck('total', 'status')->toArray();
+
+        $recentProjects = Project::latest()->take(5);
+        if ($user->hasRole('admin')) { $recentProjects->where('created_by', $user->id); }
+        $recentProjects = $recentProjects->get();
+
         $recentTransactions = collect();
         if ($user->hasRole('master') || $user->hasRole('admin')) {
-            $recentTransactionsQuery = Payment::with('project.client')->latest();
-            if ($user->hasRole('admin')) {
-                $recentTransactionsQuery->whereHas('project', function($q) use ($user) { $q->where('created_by', $user->id); });
-            }
-            $recentTransactions = $recentTransactionsQuery->take(5)->get();
+            $transQ = Payment::with('project.client')->latest();
+            if ($user->hasRole('admin')) { $transQ->whereHas('project', function($q) use ($user) { $q->where('created_by', $user->id); }); }
+            $recentTransactions = $transQ->take(5)->get();
         }
 
-        $years = range(date('Y'), date('Y') - 5);
+        $scheduledCalls = collect();
+        if ($user->hasRole('master') || $user->hasRole('admin')) {
+            $scheduledCalls = \App\Models\ClientFeedback::with('client.user')
+                ->whereNotNull('next_schedule')
+                ->whereDate('next_schedule', '>=', now()->toDateString())
+                ->orderBy('next_schedule', 'asc')
+                ->take(10)
+                ->get();
+        }
 
         return view('dashboard', [
-            'stats' => $stats,
-            'recentProjects' => $recentProjects,
-            'recentTransactions' => $recentTransactions,
-            'barLabels' => json_encode($barLabels),
-            'barDatasets' => json_encode($barDatasets),
-            'statusLabels' => json_encode(array_keys($statusData)),
-            'statusData' => json_encode(array_values($statusData)),
-            'selectedMonth' => $month,
-            'selectedYear' => $year,
-            'years' => $years,
+            'stats' => $stats, 'allTimeStats' => $allTimeStats,
+            'recentProjects' => $recentProjects, 'recentTransactions' => $recentTransactions,
+            'scheduledCalls' => $scheduledCalls,
+            'barLabels' => json_encode($barLabels), 'barDatasets' => json_encode($barDatasets),
+            'atLabels' => json_encode($atLabels), 'atDatasets' => json_encode($atDatasets),
+            'statusLabels' => json_encode(array_keys($statusCounts)), 'statusData' => json_encode(array_values($statusCounts)),
+            'selectedMonth' => $month, 'selectedYear' => $year, 'years' => $years,
         ]);
     }
 
-    /**
-     * Clear application cache.
-     */
-    public function clearCache()
-    {
-        if (!Auth::user()->hasRole('master')) {
-            abort(403);
-        }
-
+    public function clearCache() {
+        if (!Auth::user()->hasRole('master') && !Auth::user()->hasRole('admin')) abort(403);
         Artisan::call('optimize:clear');
         return back()->with('success', 'System cache cleared successfully!');
     }
 
-    /**
-     * Run database migrations.
-     */
-    public function runMigration()
-    {
-        if (!Auth::user()->hasRole('master')) {
-            abort(403);
-        }
-
+    public function runMigration() {
+        if (!Auth::user()->hasRole('master') && !Auth::user()->hasRole('admin')) abort(403);
         try {
             Artisan::call('migrate', ['--force' => true]);
-            $output = Artisan::output();
-            return back()->with('success', 'Migrations executed successfully: ' . $output);
-        } catch (\Exception $e) {
-            return back()->with('error', 'Migration failed: ' . $e->getMessage());
-        }
+            return back()->with('success', 'Migrations executed successfully: ' . Artisan::output());
+        } catch (\Exception $e) { return back()->with('error', 'Migration failed: ' . $e->getMessage()); }
     }
-    /**
-     * Run composer update.
-     */
-    public function runComposerUpdate()
-    {
-        if (!Auth::user()->hasRole('master')) {
-            abort(403);
-        }
 
+    public function runComposerUpdate() {
+        if (!Auth::user()->hasRole('master')) abort(403);
         try {
-            // Composer update can take a while
-            set_time_limit(600); 
-            
-            // Try to find composer or use default command
-            // On many systems 'composer' is in the path.
-            // We use the --no-interaction flag to prevent hang
+            set_time_limit(600);
             $process = \Illuminate\Support\Facades\Process::timeout(600)->run('composer update --no-interaction');
-
-            if ($process->successful()) {
-                return back()->with('success', 'Composer update executed successfully: ' . $process->output());
-            } else {
-                return back()->with('error', 'Composer update failed: ' . $process->errorOutput());
-            }
-        } catch (\Exception $e) {
-            return back()->with('error', 'Composer update failed: ' . $e->getMessage());
-        }
+            if ($process->successful()) return back()->with('success', 'Composer update executed successfully: ' . $process->output());
+            else return back()->with('error', 'Composer update failed: ' . $process->errorOutput());
+        } catch (\Exception $e) { return back()->with('error', 'Composer update failed: ' . $e->getMessage()); }
     }
-    /**
-     * Fix storage link issue.
-     */
-    public function fixStorageLink()
-    {
-        if (!Auth::user()->hasRole('master') && !Auth::user()->hasRole('admin')) {
-            abort(403);
-        }
 
+    public function fixStorageLink() {
+        if (!Auth::user()->hasRole('master') && !Auth::user()->hasRole('admin')) abort(403);
         try {
-            // 1. Fix APP_URL in .env if it's localhost but we're on a domain
-            $currentUrl = url('/');
-            $envAppUrl = config('app.url');
-            
+            $currentUrl = url('/'); $envAppUrl = config('app.url');
             if (str_contains($envAppUrl, '127.0.0.1') || str_contains($envAppUrl, 'localhost')) {
                 if (!str_contains($currentUrl, '127.0.0.1') && !str_contains($currentUrl, 'localhost')) {
                     $envPath = base_path('.env');
@@ -378,25 +265,11 @@ class DashboardController extends Controller
                     }
                 }
             }
-
-            // 2. Fix Storage Link
             $link = public_path('storage');
-            if (file_exists($link)) {
-                // On some hosting, it might be a folder instead of a link
-                if (is_link($link)) {
-                    unlink($link);
-                } else {
-                    // Force delete if it's a directory (might be a failed previous attempt)
-                    $this->deleteDirectory($link);
-                }
-            }
-
+            if (file_exists($link)) { if (is_link($link)) unlink($link); else $this->deleteDirectory($link); }
             Artisan::call('storage:link');
-            
-            return back()->with('success', 'System maintenance completed! APP_URL updated and Storage Link recreated. Images should now load.');
-        } catch (\Exception $e) {
-            return back()->with('error', 'Maintenance failed: ' . $e->getMessage());
-        }
+            return back()->with('success', 'Maintenance completed!');
+        } catch (\Exception $e) { return back()->with('error', 'Maintenance failed: ' . $e->getMessage()); }
     }
 
     private function deleteDirectory($dir) {

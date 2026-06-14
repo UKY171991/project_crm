@@ -7,6 +7,7 @@ use App\Models\Payment;
 use App\Models\Project;
 use App\Models\Currency;
 use Illuminate\Support\Facades\Auth;
+use App\Services\WhatsAppService;
 
 class ProjectPaymentManager extends Component
 {
@@ -27,6 +28,11 @@ class ProjectPaymentManager extends Component
     public function mount(Project $project)
     {
         $this->project = $project;
+    }
+
+    protected function whatsapp(): WhatsAppService
+    {
+        return new WhatsAppService();
     }
 
     public function render()
@@ -100,6 +106,24 @@ class ProjectPaymentManager extends Component
     {
         Payment::destroy($id);
         session()->flash('payment_success', 'Payment deleted.');
+    }
+
+    public function sendWhatsAppPaymentStatus($paymentId)
+    {
+        $payment = Payment::findOrFail($paymentId);
+        $project = Project::with('client')->findOrFail($this->project->id);
+
+        if ($project->client && $project->client->phone) {
+            $sent = $this->whatsapp()->sendPaymentStatusUpdate($project->client, $project, $payment);
+            
+            if ($sent) {
+                session()->flash('payment_success', 'WhatsApp payment status sent to ' . $project->client->phone);
+            } else {
+                session()->flash('payment_error', 'Failed to send WhatsApp message. Check logs or configuration.');
+            }
+        } else {
+            session()->flash('payment_error', 'Client phone number not found.');
+        }
     }
 
     public function closeModal()

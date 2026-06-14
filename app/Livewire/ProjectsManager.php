@@ -3,19 +3,45 @@
 namespace App\Livewire;
 
 use Livewire\Component;
+use Livewire\WithPagination;
 use App\Models\Project;
 use App\Models\Client;
 use App\Models\Currency;
 use App\Models\ProjectRemark;
 use Illuminate\Support\Facades\Auth;
+use App\Services\WhatsAppService;
 
 class ProjectsManager extends Component
 {
-    public $projects;
+    use WithPagination;
+    protected $paginationTheme = 'bootstrap';
+
+    public $searchTerm = '';
+    public $filterStatus = '';
+    public $filterClient = '';
+
     public $title, $description, $remarks, $budget, $currency = 'USD', $start_date, $due_date, $client_id, $project_id_to_edit, $status;
     public $project_urls = [];
+    public $reminder_frequency = 'none';
+    public $reminder_enabled = false;
     public $isEditMode = false;
     public $showModal = false;
+    protected $whatsappService;
+
+    public function updatedSearchTerm()
+    {
+        $this->resetPage();
+    }
+
+    public function updatedFilterStatus()
+    {
+        $this->resetPage();
+    }
+
+    public function updatedFilterClient()
+    {
+        $this->resetPage();
+    }
 
     protected $rules = [
         'title' => 'required|string|max:255',
@@ -31,6 +57,9 @@ class ProjectsManager extends Component
     {
         $user = Auth::user();
         $query = Project::query();
+        
+        // Initialize WhatsApp service
+        $this->whatsappService = new WhatsAppService();
 
         if ($user->hasRole('master')) {
             // See all
@@ -44,25 +73,74 @@ class ProjectsManager extends Component
             });
         }
 
-        $this->projects = $query->with('client', 'mediaFiles', 'payments')
+        if ($this->searchTerm) {
+            $query->where(function($q) {
+                $q->where('title', 'like', '%' . $this->searchTerm . '%')
+                  ->orWhere('description', 'like', '%' . $this->searchTerm . '%');
+            });
+        }
+
+        if ($this->filterStatus) {
+            $query->where('status', $this->filterStatus);
+        }
+
+        if ($this->filterClient) {
+            $query->where('client_id', $this->filterClient);
+        }
+
+        $projects = $query->with('client', 'mediaFiles', 'payments')
             ->orderByRaw("CASE 
                 WHEN status = 'Pending' THEN 1 
                 WHEN status = 'Running' THEN 2 
-                WHEN status = 'Completed' THEN 3
-                ELSE 4 
+                WHEN status = 'Pending Payment' THEN 3
+                WHEN status = 'Completed' THEN 4
+                ELSE 5 
             END")
             ->latest()
-            ->get();
+            ->paginate(10);
         $clients = [];
         if ($user->hasRole('master') || $user->hasRole('admin')) {
+            // Get only converted clients (with projects)
             $clients = Client::whereHas('user', function($q){
                 $q->where('is_active', true);
-            })->with('user')->get();
+            })->has('projects')->with('user')->get();
         }
 
         $activeCurrencies = Currency::where('is_active', true)->get();
+        $defaultCurrency = $activeCurrencies->where('code', 'INR')->first() ?? $activeCurrencies->first();
+        $currencySymbol = $defaultCurrency ? ($defaultCurrency->symbol ?? 'INR') : 'INR';
 
-        return view('livewire.projects-manager', compact('clients', 'activeCurrencies'));
+        // Calculate Stats
+        $baseQuery = clone $query;
+        $allProjects = $baseQuery->get();
+        
+        $stats = [
+            'current_month' => ['completed' => 0, 'pending' => 0],
+            'yearly' => ['completed' => 0, 'pending' => 0],
+            'all_time' => ['completed' => 0, 'pending' => 0]
+        ];
+
+        $currentMonth = now()->format('Y-m');
+        $currentYear = now()->format('Y');
+
+        foreach($allProjects as $p) {
+            $paid = $p->total_paid;
+            $balance = $p->balance;
+            
+            $stats['all_time']['completed'] += $paid;
+            $stats['all_time']['pending'] += $balance;
+
+            if ($p->created_at->format('Y-m') === $currentMonth) {
+                $stats['current_month']['completed'] += $paid;
+                $stats['current_month']['pending'] += $balance;
+            }
+            if ($p->created_at->format('Y') === $currentYear) {
+                $stats['yearly']['completed'] += $paid;
+                $stats['yearly']['pending'] += $balance;
+            }
+        }
+
+        return view('livewire.projects-manager', compact('projects', 'clients', 'activeCurrencies', 'stats', 'currencySymbol'));
     }
 
     public function addUrl()
@@ -107,6 +185,8 @@ class ProjectsManager extends Component
         $this->client_id = $project->client_id;
         $this->status = $project->status;
         $this->project_urls = is_array($project->urls) ? $project->urls : [];
+        $this->reminder_frequency = $project->reminder_frequency ?? 'none';
+        $this->reminder_enabled = (bool) $project->reminder_enabled;
         
         $this->isEditMode = true;
         $this->showModal = true;
@@ -125,6 +205,8 @@ class ProjectsManager extends Component
             'currency' => $this->currency,
             'start_date' => $this->start_date,
             'end_date' => $this->due_date,
+            'reminder_frequency' => $this->reminder_frequency,
+            'reminder_enabled' => $this->reminder_enabled,
         ]);
         $project->created_by = $user->id;
         $project->status = 'Pending';
@@ -167,7 +249,25 @@ class ProjectsManager extends Component
             'start_date' => $this->start_date,
             'end_date' => $this->due_date,
             'status' => $this->status ?? $project->status,
+            'reminder_frequency' => $this->reminder_frequency,
+            'reminder_enabled' => $this->reminder_enabled,
         ]);
+
+        // Auto-change to Pending Payment if project is completed
+        $oldStatus = $project->status;
+        if (($this->status ?? $project->status) == 'Completed') {
+            $project->update(['status' => 'Pending Payment']);
+        }
+        
+        // Send WhatsApp notification to client
+        if ($project->client && $project->client->phone && $oldStatus !== $project->status) {
+            $this->whatsappService->sendProjectStatusUpdate(
+                $project->client,
+                $project,
+                $oldStatus,
+                $project->status
+            );
+        }
 
         if (Auth::user()->hasRole('master') || Auth::user()->hasRole('admin')) {
              if($this->client_id) {
@@ -222,6 +322,8 @@ class ProjectsManager extends Component
         $this->client_id = '';
         $this->status = '';
         $this->project_urls = [];
+        $this->reminder_frequency = 'none';
+        $this->reminder_enabled = false;
         $this->project_id_to_edit = null;
     }
 }

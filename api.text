@@ -1,0 +1,302 @@
+=========================================
+PROJECT CRM - POSTMAN API TESTING GUIDE
+Base URL: https://crm.devloper.space
+=========================================
+
+1. LOGIN API
+-----------------------------------------
+Method : POST
+URL    : https://crm.devloper.space/api/login
+Headers: 
+  - Accept: application/json
+Body (JSON):
+{
+    "email": "your_email@example.com",
+    "password": "your_password"
+}
+Response: Returns User Object and "access_token"
+{
+    "status": "success",
+    "message": "Logged in successfully",
+    "data": {
+        "user": {
+            "id": 1,
+            "name": "Admin User",
+            "email": "admin@example.com",
+            "role_id": 1,
+            "is_active": 1,
+            "timezone": "UTC",
+            "created_at": "2024-01-01T00:00:00.000000Z",
+            "updated_at": "2024-01-01T00:00:00.000000Z",
+            "role": {
+                "id": 1,
+                "name": "Admin",
+                "slug": "admin"
+            }
+        },
+        "access_token": "1|abcdef1234567890",
+        "token_type": "Bearer"
+    }
+}
+
+---
+NOTE: For all requests below, you must pass the access_token in the Headers.
+Headers required for protected APIs:
+  - Accept: application/json
+  - Authorization: Bearer YOUR_ACCESS_TOKEN_HERE
+---
+
+2. USER INFO API
+-----------------------------------------
+Method : GET
+URL    : https://crm.devloper.space/api/user-info
+Headers: Authorization: Bearer {token}
+Response: Returns basic logged in user details.
+{
+    "id": 1,
+    "name": "Admin User",
+    "email": "admin@example.com"
+}
+
+
+3. DASHBOARD STATS API
+-----------------------------------------
+Method : GET
+URL    : https://crm.devloper.space/api/dashboard
+Headers: Authorization: Bearer {token}
+Response: Returns total projects, running projects, total clients, total websites, etc.
+{
+    "status": "success",
+    "data": {
+        "total_projects": 10,
+        "running_projects": 3,
+        "completed_projects": 7,
+        "total_clients": 5,
+        "total_non_clients": 12,
+        "total_websites": 8
+    }
+}
+
+
+4. PROJECTS LIST API
+-----------------------------------------
+Method : GET
+URL    : https://crm.devloper.space/api/projects
+Headers: Authorization: Bearer {token}
+Response: Returns a list of projects.
+{
+    "status": "success",
+    "data": [
+        {
+            "id": 1,
+            "uuid": "abc-123-def",
+            "client_id": 1,
+            "title": "Project Name",
+            "description": "Project details",
+            "urls": "https://...",
+            "budget": "5000.00",
+            "currency": "USD",
+            "start_date": "2024-01-01",
+            "end_date": "2024-02-01",
+            "status": "Running",
+            "created_by": 1,
+            "created_at": "2024-01-01T00:00:00.000000Z",
+            "updated_at": "2024-01-01T00:00:00.000000Z",
+            "client": {
+                "id": 1,
+                "company_name": "Client Company"
+                // ... client fields
+            },
+            "assignees": [
+                {
+                    "id": 1,
+                    "project_id": 1,
+                    "user_id": 2,
+                    "remark": "Lead developer"
+                }
+            ]
+        }
+    ]
+}
+
+
+5. WEBSITES LIST API
+-----------------------------------------
+Method : GET
+URL    : https://crm.devloper.space/api/websites
+Headers: Authorization: Bearer {token}
+Response: Returns a list of websites.
+{
+    "status": "success",
+    "data": [
+        {
+            "id": 1,
+            "client_id": 1,
+            "name": "Main Site",
+            "slug": "main-site",
+            "url": "https://example.com",
+            "domain_name": "example.com",
+            "domain_expiry_date": "2025-01-01",
+            "ssl_expiry_date": "2025-01-01",
+            "hosting_provider": "AWS",
+            "hosting_expiry_date": "2025-01-01",
+            "server_ip": "192.168.1.1",
+            "status": "Active",
+            "created_at": "2024-01-01T00:00:00.000000Z",
+            "updated_at": "2024-01-01T00:00:00.000000Z",
+            "client": {
+                "id": 1,
+                "company_name": "Client Company"
+            }
+        }
+    ]
+}
+
+
+6. NON-CLIENTS (LEADS) LIST API
+-----------------------------------------
+Method : GET
+URL    : https://crm.devloper.space/api/non-clients
+Headers: Authorization: Bearer {token}
+Response: Returns Leads list with call schedules.
+{
+    "status": "success",
+    "data": [
+        {
+            "id": 1,
+            "user_id": 2,
+            "company_name": "Lead Company",
+            "city": "New York",
+            "phone": "+1234567890",
+            "last_whatsapp_at": null,
+            "address": "123 Main St",
+            "status": "New",
+            "created_at": "2024-01-01T00:00:00.000000Z",
+            "updated_at": "2024-01-01T00:00:00.000000Z",
+            "name": "Lead Company",
+            "user": {
+                "id": 2,
+                "name": "User Name",
+                "email": "user@example.com"
+            },
+            "feedbacks": [
+                {
+                    "id": 1,
+                    "client_id": 1,
+                    "feedback": "Called, asked to call back next week.",
+                    "status": "Contacted",
+                    "next_schedule": "2024-05-20 10:00:00",
+                    "created_by": 1,
+                    "creator": {
+                        "id": 1,
+                        "name": "Admin User"
+                    }
+                }
+            ]
+        }
+    ]
+}
+
+
+7. VIEW SINGLE NON-CLIENT (LEAD) API
+-----------------------------------------
+Method : GET
+URL    : https://crm.devloper.space/api/non-clients/{id}
+Headers: Authorization: Bearer {token}
+Response: Returns a single Lead's details.
+{
+    "status": "success",
+    "data": {
+        "id": 1,
+        "user_id": 2,
+        "company_name": "Lead Company",
+        "city": "New York",
+        "phone": "+1234567890",
+        "last_whatsapp_at": null,
+        "address": "123 Main St",
+        "status": "New",
+        "created_at": "2024-01-01T00:00:00.000000Z",
+        "updated_at": "2024-01-01T00:00:00.000000Z",
+        "name": "Lead Company",
+        "user": {
+            "id": 2,
+            "name": "User Name",
+            "email": "user@example.com"
+        },
+        "feedbacks": []
+    }
+}
+
+
+8. UPDATE NON-CLIENT (LEAD) STATUS API
+-----------------------------------------
+Method : POST
+URL    : https://crm.devloper.space/api/non-clients/{id}/status
+Headers: Authorization: Bearer {token}
+Body (JSON):
+{
+    "status": "Contacted"
+}
+Response: Updates the status of a specific lead.
+{
+    "status": "success",
+    "message": "Status updated successfully",
+    "data": {
+        "id": 1,
+        "user_id": 2,
+        "company_name": "Lead Company",
+        "city": "New York",
+        "phone": "+1234567890",
+        "last_whatsapp_at": null,
+        "address": "123 Main St",
+        "status": "Contacted",
+        "created_at": "2024-01-01T00:00:00.000000Z",
+        "updated_at": "2024-01-01T12:00:00.000000Z",
+        "name": "Lead Company"
+    }
+}
+
+
+9. ADD NON-CLIENT (LEAD) FEEDBACK API
+-----------------------------------------
+Method : POST
+URL    : https://crm.devloper.space/api/non-clients/{id}/feedback
+Headers: Authorization: Bearer {token}
+Body (JSON):
+{
+    "feedback": "Called, asked to call back next week.",
+    "status": "Contacted",
+    "next_schedule": "2024-05-20 10:00:00"
+}
+Response: Adds feedback and optionally updates the lead's main status.
+{
+    "status": "success",
+    "message": "Feedback added successfully",
+    "data": {
+        "id": 1,
+        "client_id": 1,
+        "feedback": "Called, asked to call back next week.",
+        "status": "Contacted",
+        "next_schedule": "2024-05-20 10:00:00",
+        "created_by": 1,
+        "created_at": "2024-01-01T00:00:00.000000Z",
+        "updated_at": "2024-01-01T00:00:00.000000Z",
+        "creator": {
+            "id": 1,
+            "name": "Admin User",
+            "email": "admin@example.com"
+        }
+    }
+}
+
+
+10. LOGOUT API
+-----------------------------------------
+Method : POST
+URL    : https://crm.devloper.space/api/logout
+Headers: Authorization: Bearer {token}
+Response: Revokes current access token.
+{
+    "status": "success",
+    "message": "Logged out successfully"
+}

@@ -15,6 +15,11 @@
                 {{ session('payment_success') }}
             </div>
         @endif
+        @if(session()->has('payment_error'))
+            <div class="alert alert-danger mx-2 mt-2 py-1 small">
+                {{ session('payment_error') }}
+            </div>
+        @endif
 
         <table class="table table-sm table-valign-middle mb-0">
             <thead>
@@ -41,6 +46,9 @@
                     </td>
                     @if(auth()->user()->hasRole('master') || auth()->user()->hasRole('admin'))
                     <td class="text-right pr-3">
+                        <button wire:click="sendWhatsAppPaymentStatus({{ $payment->id }})" class="btn btn-xs btn-link text-success p-0 mr-1" wire:loading.attr="disabled" title="Send WhatsApp Status">
+                            <i class="fab fa-whatsapp"></i>
+                        </button>
                         <button wire:click="edit({{ $payment->id }})" class="btn btn-xs btn-link text-info p-0 mr-1">
                             <i class="fas fa-edit"></i>
                         </button>

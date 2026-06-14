@@ -78,7 +78,7 @@
                                          <td>{{ $project->currency }} {{ number_format($project->budget, 2) }}</td>
                                          <td>{{ $project->end_date ? \Carbon\Carbon::parse($project->end_date)->format('d M Y') : 'N/A' }}</td>
                                          <td>
-                                             <span class="badge {{ $project->status == 'Running' ? 'badge-success' : ($project->status == 'Pending' ? 'badge-warning' : 'badge-secondary') }}">
+                                             <span class="badge {{ $project->status == 'Running' ? 'badge-success' : ($project->status == 'Pending' ? 'badge-warning' : ($project->status == 'Pending Payment' ? 'badge-info' : 'badge-secondary')) }}">
                                                  {{ $project->status }}
                                              </span>
                                          </td>

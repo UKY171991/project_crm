@@ -29,7 +29,7 @@
                                             <select class="form-control" wire:model="calcUserId">
                                                 <option value="">-- Choose User --</option>
                                                 @foreach($users as $user)
-                                                    <option value="{{ $user->id }}">{{ $user->name }}</option>
+                                                    <option value="{{ $user->id }}">{{ $user->name }} ({{ $user->role ? $user->role->name : 'No Role' }})</option>
                                                 @endforeach
                                             </select>
                                         </div>
@@ -102,7 +102,7 @@
                                     <select class="form-control" wire:model="userId">
                                         <option value="">-- Select --</option>
                                         @foreach($users as $user)
-                                            <option value="{{ $user->id }}">{{ $user->name }}</option>
+                                            <option value="{{ $user->id }}">{{ $user->name }} ({{ $user->role ? $user->role->name : 'No Role' }})</option>
                                         @endforeach
                                     </select>
                                 </div>
@@ -190,15 +190,34 @@
                                 <h5 class="font-weight-bold mb-3">Upcoming / Past Holidays</h5>
                                 <ul class="list-group">
                                     @foreach($holidays as $h)
-                                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                                        @php
+                                            $today = \Carbon\Carbon::today();
+                                            $holidayDate = \Carbon\Carbon::parse($h->date);
+                                            
+                                            // Determine holiday status
+                                            if ($holidayDate->isToday()) {
+                                                $bgColor = 'bg-success text-white'; // Today - Green
+                                                $iconColor = 'text-white';
+                                                $badgeColor = 'badge-light';
+                                            } elseif ($holidayDate->isFuture()) {
+                                                $bgColor = 'bg-info text-white'; // Upcoming - Blue
+                                                $iconColor = 'text-white';
+                                                $badgeColor = 'badge-light';
+                                            } else {
+                                                $bgColor = 'bg-secondary text-white'; // Past - Gray
+                                                $iconColor = 'text-white';
+                                                $badgeColor = 'badge-light';
+                                            }
+                                        @endphp
+                                        <li class="list-group-item d-flex justify-content-between align-items-center {{ $bgColor }}">
                                             <span>
-                                                <i class="fas fa-calendar-day text-primary mr-2"></i>
+                                                <i class="fas fa-calendar-day {{ $iconColor }} mr-2"></i>
                                                 {{ $h->date->format('M d, Y') }} - <strong>{{ $h->name }}</strong>
                                             </span>
                                             <div>
-                                                <span class="badge badge-pill badge-primary mr-2">{{ $h->type }}</span>
-                                                <button class="btn btn-xs btn-outline-info" wire:click="editHoliday({{ $h->id }})"><i class="fas fa-edit"></i></button>
-                                                <button class="btn btn-xs btn-outline-danger" onclick="confirm('Delete this holiday?') || event.stopImmediatePropagation()" wire:click="deleteHoliday({{ $h->id }})"><i class="fas fa-trash"></i></button>
+                                                <span class="badge badge-pill {{ $badgeColor }} mr-2">{{ $h->type }}</span>
+                                                <button class="btn btn-xs btn-outline-light" wire:click="editHoliday({{ $h->id }})"><i class="fas fa-edit"></i></button>
+                                                <button class="btn btn-xs btn-outline-light" onclick="confirm('Delete this holiday?') || event.stopImmediatePropagation()" wire:click="deleteHoliday({{ $h->id }})"><i class="fas fa-trash"></i></button>
                                             </div>
                                         </li>
                                     @endforeach

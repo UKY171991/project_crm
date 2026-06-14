@@ -67,4 +67,37 @@ class CronController extends Controller
             ], 500);
         }
     }
+
+
+
+    /**
+     * Run Laravel scheduler (all scheduled tasks)
+     * 
+     * URL: /cron/run-scheduler?cron_key=YOUR_KEY
+     */
+    public function runScheduler(Request $request)
+    {
+        $storedKey = Setting::get('cron_key', 'crm_tasks_cron_2026');
+        $providedKey = $request->query('cron_key');
+
+        if ($providedKey !== $storedKey) {
+            return response()->json(['error' => 'Unauthorized. Invalid cron key.'], 401);
+        }
+
+        try {
+            \Artisan::call('schedule:run');
+            $output = \Artisan::output();
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Scheduler executed successfully',
+                'output' => $output
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
 }

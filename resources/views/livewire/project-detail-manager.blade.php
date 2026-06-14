@@ -15,11 +15,18 @@
         <!-- DETAIL COLUMN -->
         <div class="col-md-8">
             <div class="card card-primary card-outline shadow-sm mb-4">
-                <div class="card-header border-0">
+                <div class="card-header border-0 d-flex justify-content-between align-items-center">
                     <h3 class="card-title font-weight-bold" style="font-size: 1.5rem;">
                         <i class="fas fa-folder-open mr-2 text-primary"></i>
                         {{ $project->title }}
                     </h3>
+                    @if(auth()->user()->hasRole('master') || auth()->user()->hasRole('admin'))
+                    <div class="ml-auto">
+                        <button wire:click="sendManualNotification" class="btn btn-outline-info btn-sm shadow-sm" wire:loading.attr="disabled" title="Send Status Notification (WhatsApp/Email)">
+                            <i class="fas fa-bell mr-1"></i> Send Status Notification
+                        </button>
+                    </div>
+                    @endif
                 </div>
                 <div class="card-body pt-0">
                     @if($project->urls && count($project->urls) > 0)
@@ -92,6 +99,7 @@
                                             <select class="form-control" wire:model="requested_status">
                                                 <option value="Pending">Pending</option>
                                                 <option value="Running">Running</option>
+                                                <option value="Pending Payment">Pending Payment</option>
                                                 <option value="Completed">Completed</option>
                                                 <option value="Canceled">Canceled</option>
                                             </select>
@@ -305,10 +313,10 @@
                 <div class="card-body">
                     <div class="form-group pb-2 mb-2 border-bottom">
                         <label class="small text-muted mb-1">Upload Screenshot (Max 10MB)</label>
-                        <div x-data="{ uploading: false, progress: 0 }"
-                             x-on:livewire-upload-start="uploading = true"
+                        <div x-data="{ uploading: false, progress: 0, error: false }"
+                             x-on:livewire-upload-start="uploading = true; error = false"
                              x-on:livewire-upload-finish="uploading = false"
-                             x-on:livewire-upload-error="uploading = false"
+                             x-on:livewire-upload-error="uploading = false; error = true"
                              x-on:livewire-upload-progress="progress = $event.detail.progress">
                              
                             <div class="custom-file custom-file-sm">
@@ -322,16 +330,20 @@
                             <div x-show="uploading" class="progress progress-xxs mt-2">
                                 <div class="progress-bar bg-success" role="progressbar" x-bind:style="'width: ' + progress + '%'"></div>
                             </div>
+
+                            <div x-show="error" class="text-danger xsmall mt-1">
+                                <i class="fas fa-exclamation-circle"></i> Upload failed. File might be too large for the server (Max 40MB).
+                            </div>
                         </div>
                         @error('photo') <span class="text-danger xsmall">{{ $message }}</span> @enderror
                     </div>
                     
                     <div class="form-group">
-                        <label class="small text-muted mb-1">Upload Video (Max 500MB)</label>
-                        <div x-data="{ uploading: false, progress: 0 }"
-                             x-on:livewire-upload-start="uploading = true"
+                        <label class="small text-muted mb-1">Upload Video (Server Max: 40MB)</label>
+                        <div x-data="{ uploading: false, progress: 0, error: false }"
+                             x-on:livewire-upload-start="uploading = true; error = false"
                              x-on:livewire-upload-finish="uploading = false"
-                             x-on:livewire-upload-error="uploading = false"
+                             x-on:livewire-upload-error="uploading = false; error = true"
                              x-on:livewire-upload-progress="progress = $event.detail.progress">
 
                             <div class="custom-file custom-file-sm">
@@ -350,6 +362,10 @@
                                 <div class="progress progress-xs">
                                     <div class="progress-bar bg-info progress-bar-striped progress-bar-animated" role="progressbar" x-bind:style="'width: ' + progress + '%'"></div>
                                 </div>
+                            </div>
+
+                            <div x-show="error" class="text-danger xsmall mt-1">
+                                <i class="fas fa-exclamation-circle"></i> Upload failed. Server limit is 40MB.
                             </div>
                         </div>
                          @error('video') <span class="text-danger xsmall">{{ $message }}</span> @enderror

@@ -95,16 +95,22 @@ class PaymentManager extends Component
         
         $projects = [];
         if ($user->hasRole('master') || $user->hasRole('admin')) {
-            $projects = Project::where('status', '!=', 'Canceled')->latest()->get();
+            $projects = Project::whereIn('status', ['Pending', 'Pending Payment', 'Running'])
+                ->when($this->isEditMode && $this->project_id, function($query) {
+                    return $query->orWhere('id', $this->project_id);
+                })
+                ->latest()
+                ->get();
         }
 
         $activeCurrencies = Currency::where('is_active', true)->get();
         
-        // Get available months for filter dropdown
-        $availableMonths = Payment::selectRaw('DISTINCT DATE_FORMAT(payment_date, "%Y-%m") as month')
-            ->whereNotNull('payment_date')
-            ->orderBy('month', 'desc')
-            ->pluck('month');
+        // Generate all 12 months of the current year
+        $availableMonths = collect();
+        $currentYear = (int) date('Y');
+        for ($month = 12; $month >= 1; $month--) {
+            $availableMonths->push(sprintf('%04d-%02d', $currentYear, $month));
+        }
 
         return view('livewire.payment-manager', compact('projects', 'activeCurrencies', 'availableMonths'));
     }
@@ -201,7 +207,7 @@ class PaymentManager extends Component
     
     public function updatedSelectedMonth()
     {
-        // This will trigger re-render and recalculation
+        // Triggers re-render and recalculation automatically
     }
     
     private function calculateTotals()

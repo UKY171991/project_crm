@@ -53,7 +53,8 @@ class ProjectController extends Controller
 
         $clients = [];
         if ($user->hasRole('master') || $user->hasRole('admin')) {
-            $clients = Client::all();
+            // Get only converted clients (with projects)
+            $clients = Client::has('projects')->get();
         }
 
         return view('projects.create', compact('clients'));

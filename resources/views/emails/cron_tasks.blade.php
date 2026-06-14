@@ -17,6 +17,7 @@
         .status-badge { display: inline-block; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; text-transform: uppercase; }
         .status-pending { background-color: #fff3e0; color: #ef6c00; }
         .status-running { background-color: #e3f2fd; color: #1565c0; }
+        .status-pending-payment { background-color: #e8f5e9; color: #00695c; }
         .status-completed { background-color: #e8f5e9; color: #2e7d32; }
         .balance-box { background-color: #ffebee; color: #c62828; padding: 10px; border-radius: 4px; text-align: center; font-weight: bold; }
         .project-details { font-size: 13px; color: #666; margin-top: 5px; }

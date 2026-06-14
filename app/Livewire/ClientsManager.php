@@ -27,6 +27,7 @@ class ClientsManager extends Component
     public function render()
     {
         $this->clients = Client::with('user')
+            ->has('projects')
             ->withCount(['projects as pending_tasks_count' => function ($query) {
                 $query->whereIn('status', ['Pending', 'Running']);
             }])
@@ -136,6 +137,12 @@ class ClientsManager extends Component
         $client->delete();
         
         session()->flash('success', 'Client Deleted Successfully.');
+    }
+
+    public function logWhatsApp($clientId)
+    {
+        $client = Client::findOrFail($clientId);
+        $client->update(['last_whatsapp_at' => now()]);
     }
 
     public function closeModal()

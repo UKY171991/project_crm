@@ -18,7 +18,7 @@
             <div class="card-tools">
                 <div class="d-flex align-items-center gap-2">
                     <!-- Month Filter -->
-                    <select class="form-control form-control-sm" wire:model="selectedMonth" style="width: 150px;">
+                    <select class="form-control form-control-sm" wire:model.live="selectedMonth" style="width: 150px;">
                         <option value="">All Months</option>
                         @foreach($availableMonths as $month)
                             <option value="{{ $month }}">{{ Carbon::parse($month . '-01')->format('M Y') }}</option>
@@ -116,11 +116,49 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="7" class="text-center text-muted">No expenses found.</td>
+                            <td colspan="8" class="text-center text-muted">No expenses found.</td>
                         </tr>
                     @endforelse
                 </tbody>
+                <tfoot class="bg-light font-weight-bold">
+                    <tr>
+                        <td colspan="5" class="text-right"><strong>Totals ({{ $selectedMonth ? Carbon::parse($selectedMonth . '-01')->format('M Y') : 'All Months' }}):</strong></td>
+                        <td>
+                            <span class="text-primary">Total: {{ number_format($totalAmount, 2) }}</span><br>
+                            <span class="text-success">Paid: {{ number_format($paidAmount, 2) }}</span><br>
+                            <span class="text-warning">Pending: {{ number_format($pendingAmount, 2) }}</span><br>
+                            <span class="text-danger">Rejected: {{ number_format($rejectedAmount, 2) }}</span>
+                        </td>
+                        <td colspan="2"></td>
+                    </tr>
+                </tfoot>
             </table>
+            </div>
+
+            <!-- Pending Summary Panel -->
+            <div class="row p-3 border-top">
+                <div class="col-md-6">
+                    <div class="card border-warning shadow-sm">
+                        <div class="card-body py-2 d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="card-title mb-0 text-warning"><i class="fas fa-exclamation-circle"></i> Total Pending (All Time)</h6>
+                                <small class="text-muted">All unpaid expenses across all months</small>
+                            </div>
+                            <h4 class="mb-0 text-warning font-weight-bold">{{ number_format($overallPendingAmount, 2) }}</h4>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card border-info shadow-sm">
+                        <div class="card-body py-2 d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="card-title mb-0 text-info"><i class="fas fa-calendar-alt"></i> This Month Pending ({{ Carbon::now()->format('M Y') }})</h6>
+                                <small class="text-muted">Unpaid expenses for the current month</small>
+                            </div>
+                            <h4 class="mb-0 text-info font-weight-bold">{{ number_format($thisMonthPendingAmount, 2) }}</h4>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>

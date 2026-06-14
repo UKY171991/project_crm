@@ -2,33 +2,28 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Api\ScreenshotController;
 
-Route::get('/user', function (Request $request) {
-    return $request->user();
-})->middleware('auth:sanctum');
 
-// Screenshot API routes (no auth for desktop app)
-Route::post('/screenshot-upload', [ScreenshotController::class, 'upload']);
-Route::post('/get-active-attendance', [ScreenshotController::class, 'getActiveAttendance']);
-Route::get('/get-active-attendance', [ScreenshotController::class, 'getActiveAttendance']);
-
-Route::match(['post', 'options'], '/login', [ScreenshotController::class, 'login']);
-Route::match(['post', 'options'], '/get-work-stats', [ScreenshotController::class, 'getWorkStats']);
-Route::match(['post', 'options'], '/clock-out', [ScreenshotController::class, 'clockOut']);
-Route::match(['post', 'options'], '/heartbeat', [ScreenshotController::class, 'heartbeat']);
-Route::match(['post', 'options'], '/activity-track', [ScreenshotController::class, 'activityTrack']);
-Route::match(['post', 'options'], '/get-projects', [ScreenshotController::class, 'getProjects']);
-Route::match(['post', 'options'], '/get-pending-payments', [ScreenshotController::class, 'getPendingPayments']);
 
 // Get authenticated user info (for desktop app)
-Route::get('/user-info', function (Request $request) {
-    if (auth()->check()) {
-        return response()->json([
-            'id' => auth()->id(),
-            'name' => auth()->user()->name,
-            'email' => auth()->user()->email
-        ]);
-    }
-    return response()->json(['error' => 'Not authenticated'], 401);
+Route::middleware('auth:sanctum')->get('/user-info', function (Request $request) {
+    return response()->json([
+        'id' => auth()->id(),
+        'name' => auth()->user()->name,
+        'email' => auth()->user()->email
+    ]);
+});
+
+Route::post('/login', [\App\Http\Controllers\Api\AuthController::class, 'login']);
+
+Route::middleware('auth:sanctum')->group(function () {
+    Route::post('/logout', [\App\Http\Controllers\Api\AuthController::class, 'logout']);
+    
+    Route::get('/dashboard', [\App\Http\Controllers\Api\ApiController::class, 'dashboard']);
+    Route::get('/projects', [\App\Http\Controllers\Api\ApiController::class, 'projects']);
+    Route::get('/websites', [\App\Http\Controllers\Api\ApiController::class, 'websites']);
+    Route::get('/non-clients', [\App\Http\Controllers\Api\ApiController::class, 'nonClients']);
+    Route::get('/non-clients/{id}', [\App\Http\Controllers\Api\ApiController::class, 'viewNonClient']);
+    Route::post('/non-clients/{id}/status', [\App\Http\Controllers\Api\ApiController::class, 'updateNonClientStatus']);
+    Route::post('/non-clients/{id}/feedback', [\App\Http\Controllers\Api\ApiController::class, 'addNonClientFeedback']);
 });

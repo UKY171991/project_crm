@@ -7,18 +7,21 @@ Route::get('/', function () {
     return view('welcome');
 });
 
-// Cron Job Route
+// Cron Job Routes
 Route::get('/cron/pending-tasks', [\App\Http\Controllers\CronController::class, 'sendPendingTasksEmail']);
+
+Route::get('/cron/run-scheduler', [\App\Http\Controllers\CronController::class, 'runScheduler']);
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/dashboard', [\App\Http\Controllers\DashboardController::class, 'index'])->name('dashboard');
 
     Route::resource('projects', \App\Http\Controllers\ProjectController::class);
+    Route::resource('websites', \App\Http\Controllers\WebsiteController::class);
     
-    // Attendance
-    Route::get('attendance', function() {
-        return view('attendance.index');
-    })->name('attendance.index');
+    Route::get('non-clients', function() {
+        return view('clients.non-clients');
+    })->name('clients.non-clients');
+
     
     // Media Uploads
     Route::post('projects/{project}/upload-image', [\App\Http\Controllers\MediaController::class, 'storeImage'])->name('projects.upload-image');
@@ -34,8 +37,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('expenses', function() {
             return view('expenses.index');
         })->name('expenses.index');
+
+        Route::get('loans', function() {
+            return view('loans.index');
+        })->name('loans.index');
         
         Route::resource('clients', \App\Http\Controllers\ClientController::class);
+
+
         Route::resource('users', \App\Http\Controllers\UserController::class);
         Route::get('settings', function() {
             return view('settings.index');
@@ -48,6 +57,19 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::post('system/composer-update', [\App\Http\Controllers\DashboardController::class, 'runComposerUpdate'])->name('system.composer-update');
             Route::post('system/fix-storage', [\App\Http\Controllers\DashboardController::class, 'fixStorageLink'])->name('system.fix-storage');
         });
+        
+        // Admin & Master System Tools
+        Route::middleware(['role:master,admin'])->group(function () {
+
+            
+            // WhatsApp Management
+            Route::get('whatsapp/settings', function() {
+                return view('settings.whatsapp');
+            })->name('whatsapp.settings');
+            Route::get('whatsapp/test-connection', [\App\Http\Controllers\WhatsAppController::class, 'testConnection'])->name('whatsapp.test-connection');
+            Route::post('whatsapp/send-test', [\App\Http\Controllers\WhatsAppController::class, 'sendTestMessage'])->name('whatsapp.send-test');
+        });
+        
         Route::get('payments', function() {
             return view('payments.index');
         })->name('payments.index');
@@ -59,10 +81,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         
         Route::get('hr/salary-slip', [\App\Http\Controllers\HRController::class, 'generateSalarySlip'])->name('hr.salary-slip');
         
-        // Screenshots
-        Route::get('screenshots', function() {
-            return view('screenshots.index');
-        })->name('screenshots.index');
+
     });
 
 
@@ -78,3 +97,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 });
 
 require __DIR__.'/auth.php';
+
+// WhatsApp Webhook Routes (outside auth middleware)
+Route::get('/webhook/whatsapp/verify', [\App\Http\Controllers\WhatsAppController::class, 'verifyWebhook']);
+Route::post('/webhook/whatsapp', [\App\Http\Controllers\WhatsAppController::class, 'handleWebhook']);

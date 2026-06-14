@@ -23,12 +23,17 @@ class Project extends Model
         'end_date',
         'status',
         'created_by',
+        'reminder_frequency',
+        'last_reminder_at',
+        'reminder_enabled',
     ];
 
     protected $casts = [
         'start_date' => 'date',
         'end_date' => 'date',
         'urls' => 'array',
+        'last_reminder_at' => 'datetime',
+        'reminder_enabled' => 'boolean',
     ];
 
     public function projectRemarks()
