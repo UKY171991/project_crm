@@ -20,29 +20,8 @@
                 <div class="row">
                     <div class="col-md-6">
                         <div class="form-group">
-                            <label>Gateway Type</label>
-                            <select class="form-control" wire:model.live="settings.type">
-                                <option value="official">Official Meta WhatsApp API</option>
-                                <option value="fast2sms">Fast2SMS WhatsApp API</option>
-                                <option value="custom">Custom Unofficial Gateway (Without API)</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="form-group">
-                            <label>Default Country Code</label>
-                            <input type="text" class="form-control" wire:model="settings.default_country_code" placeholder="91">
-                            @error('settings.default_country_code') <span class="text-danger">{{ $message }}</span> @enderror
-                        </div>
-                    </div>
-                </div>
-
-                @if(($settings['type'] ?? 'official') === 'official' || ($settings['type'] ?? 'official') === 'fast2sms')
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="form-group">
-                            <label>WhatsApp Access Token</label>
-                            <input type="password" class="form-control" wire:model="settings.access_token" placeholder="Enter Meta WhatsApp Access Token">
+                            <label>WhatsApp Access Token (API Key)</label>
+                            <input type="password" class="form-control" wire:model="settings.access_token" placeholder="Enter WABA Access Token">
                             @error('settings.access_token') <span class="text-danger">{{ $message }}</span> @enderror
                         </div>
                     </div>
@@ -58,19 +37,16 @@
                 <div class="row">
                     <div class="col-md-6">
                         <div class="form-group">
-                            <label>API Version</label>
-                            <select class="form-control" wire:model="settings.version">
-                                <option value="v18.0">v18.0</option>
-                                <option value="v17.0">v17.0</option>
-                                <option value="v16.0">v16.0</option>
-                            </select>
+                            <label>Template Name</label>
+                            <input type="text" class="form-control" wire:model="settings.template_name" placeholder="Enter WABA Template Name (e.g. praposal)">
+                            @error('settings.template_name') <span class="text-danger">{{ $message }}</span> @enderror
                         </div>
                     </div>
                     <div class="col-md-6">
                         <div class="form-group">
-                            <label>General Template Name</label>
-                            <input type="text" class="form-control" wire:model="settings.template_name" placeholder="project_status_update">
-                            @error('settings.template_name') <span class="text-danger">{{ $message }}</span> @enderror
+                            <label>Template ID</label>
+                            <input type="text" class="form-control" wire:model="settings.template_id" placeholder="Enter WABA Template ID (e.g. 1014519774407056)">
+                            @error('settings.template_id') <span class="text-danger">{{ $message }}</span> @enderror
                         </div>
                     </div>
                 </div>
@@ -78,143 +54,21 @@
                 <div class="row">
                     <div class="col-md-6">
                         <div class="form-group">
-                            <label>Payment Template Name</label>
-                            <input type="text" class="form-control" wire:model="settings.payment_template_name" placeholder="project_payment_status">
-                            @error('settings.payment_template_name') <span class="text-danger">{{ $message }}</span> @enderror
+                            <label>Sender Number</label>
+                            <input type="text" class="form-control" wire:model="settings.sender_number" placeholder="Enter Sender Number (e.g. +919453619260)">
+                            @error('settings.sender_number') <span class="text-danger">{{ $message }}</span> @enderror
                         </div>
                     </div>
                     <div class="col-md-6">
                         <div class="form-group">
-                            <label>Proposal Template Name</label>
-                            <input type="text" class="form-control" wire:model="settings.proposal_template_name" placeholder="praposal">
+                            <label>Message ID</label>
+                            <input type="text" class="form-control" wire:model="settings.proposal_template_name" placeholder="Enter Fast2SMS Message ID (e.g. 23233)">
                             @error('settings.proposal_template_name') <span class="text-danger">{{ $message }}</span> @enderror
                         </div>
                     </div>
                 </div>
 
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="form-group">
-                            <label>Language Code</label>
-                            <select class="form-control" wire:model="settings.language">
-                                <option value="en">English</option>
-                                <option value="hi">Hindi</option>
-                                <option value="es">Spanish</option>
-                                <option value="fr">French</option>
-                            </select>
-                        </div>
-                    </div>
-                    @if(($settings['type'] ?? 'official') === 'official')
-                    <div class="col-md-6">
-                        <div class="form-group">
-                            <label>Webhook Verify Token</label>
-                            <input type="password" class="form-control" wire:model="settings.webhook_verify_token" placeholder="Enter webhook verification token">
-                            @error('settings.webhook_verify_token') <span class="text-danger">{{ $message }}</span> @enderror
-                        </div>
-                    </div>
-                    @endif
-                </div>
-
-                <!-- Toggle for Single Template vs Multiple Status-Specific Templates -->
-                <div class="card card-outline card-secondary mb-3 mt-2">
-                    <div class="card-body">
-                        <div class="form-group mb-0">
-                            <div class="custom-control custom-switch">
-                                <input type="checkbox" class="custom-control-input" id="use_default_only" wire:model.live="settings.use_default_only">
-                                <label class="custom-control-label font-weight-bold" for="use_default_only">Use Single Template for all status changes</label>
-                            </div>
-                            <small class="text-muted text-xs d-block mt-1">If enabled, the General Template Name is used for all status transition alerts. If disabled, you can configure individual templates for each status change below.</small>
-                        </div>
-                    </div>
-                </div>
-
-                @if(!($settings['use_default_only'] ?? true))
-                <div class="card card-outline card-info mb-3">
-                    <div class="card-header">
-                        <h4 class="card-title text-sm"><i class="fas fa-random mr-1"></i> Status Transition Templates</h4>
-                    </div>
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label>Pending to Running</label>
-                                    <input type="text" class="form-control" wire:model="settings.template_pending_to_running" placeholder="project_status_pending_to_running">
-                                    @error('settings.template_pending_to_running') <span class="text-danger">{{ $message }}</span> @enderror
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label>Running to Pending Payment</label>
-                                    <input type="text" class="form-control" wire:model="settings.template_running_to_pending_payment" placeholder="project_status_running_to_pending_payment">
-                                    @error('settings.template_running_to_pending_payment') <span class="text-danger">{{ $message }}</span> @enderror
-                                </div>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label>Pending Payment to Completed</label>
-                                    <input type="text" class="form-control" wire:model="settings.template_pending_payment_to_completed" placeholder="project_status_pending_payment_to_completed">
-                                    @error('settings.template_pending_payment_to_completed') <span class="text-danger">{{ $message }}</span> @enderror
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label>Pending to Canceled</label>
-                                    <input type="text" class="form-control" wire:model="settings.template_pending_to_canceled" placeholder="project_status_pending_to_canceled">
-                                    @error('settings.template_pending_to_canceled') <span class="text-danger">{{ $message }}</span> @enderror
-                                </div>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label>Running to Canceled</label>
-                                    <input type="text" class="form-control" wire:model="settings.template_running_to_canceled" placeholder="project_status_running_to_canceled">
-                                    @error('settings.template_running_to_canceled') <span class="text-danger">{{ $message }}</span> @enderror
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label>Pending Payment to Canceled</label>
-                                    <input type="text" class="form-control" wire:model="settings.template_pending_payment_to_canceled" placeholder="project_status_pending_payment_to_canceled">
-                                    @error('settings.template_pending_payment_to_canceled') <span class="text-danger">{{ $message }}</span> @enderror
-                                </div>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label>Canceled to Pending</label>
-                                    <input type="text" class="form-control" wire:model="settings.template_canceled_to_pending" placeholder="project_status_canceled_to_pending">
-                                    @error('settings.template_canceled_to_pending') <span class="text-danger">{{ $message }}</span> @enderror
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label>Canceled to Running</label>
-                                    <input type="text" class="form-control" wire:model="settings.template_canceled_to_running" placeholder="project_status_canceled_to_running">
-                                    @error('settings.template_canceled_to_running') <span class="text-danger">{{ $message }}</span> @enderror
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                @endif
-                @else
-                <div class="row">
-                    <div class="col-md-12">
-                        <div class="form-group">
-                            <label>Custom Gateway URL (GET Request)</label>
-                            <input type="text" class="form-control" wire:model="settings.custom_gateway_url" placeholder="https://api.yourgateway.com/send?phone={phone}&text={text}">
-                            <small class="text-muted">Use <code>{phone}</code> and <code>{text}</code> as placeholders.</small>
-                            @error('settings.custom_gateway_url') <span class="text-danger">{{ $message }}</span> @enderror
-                        </div>
-                    </div>
-                </div>
-                @endif
-
-                <div class="form-group">
+                <div class="form-group mt-3">
                     <div class="custom-control custom-switch">
                         <input type="checkbox" class="custom-control-input" id="enable_whatsapp" wire:model="settings.enabled">
                         <label class="custom-control-label" for="enable_whatsapp">Enable WhatsApp Notifications</label>

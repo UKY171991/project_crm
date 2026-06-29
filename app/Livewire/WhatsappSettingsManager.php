@@ -16,9 +16,11 @@ class WhatsappSettingsManager extends Component
         'phone_number_id' => '',
         'version' => 'v18.0',
         'webhook_verify_token' => '',
-        'template_name' => 'project_status_update',
+        'template_name' => 'praposal',
+        'template_id' => '1014519774407056',
+        'sender_number' => '+919453619260',
         'payment_template_name' => 'project_payment_status',
-        'proposal_template_name' => 'praposal',
+        'proposal_template_name' => '23233',
         'use_default_only' => true,
         'template_pending_to_running' => 'project_status_pending_to_running',
         'template_running_to_pending_payment' => 'project_status_running_to_pending_payment',
@@ -63,38 +65,36 @@ class WhatsappSettingsManager extends Component
         if ($this->settings['type'] === 'official' || $this->settings['type'] === 'fast2sms') {
             $rules['settings.access_token'] = 'required|string';
             $rules['settings.phone_number_id'] = 'required|string';
-            $rules['settings.version'] = 'required|string';
             $rules['settings.template_name'] = 'required|string';
-            $rules['settings.payment_template_name'] = 'required|string';
+            $rules['settings.template_id'] = 'required|string';
+            $rules['settings.sender_number'] = 'required|string';
             $rules['settings.proposal_template_name'] = 'required|string';
-            $rules['settings.use_default_only'] = 'required|boolean';
-            $rules['settings.language'] = 'required|string';
             
-            if (!$this->settings['use_default_only']) {
-                $rules['settings.template_pending_to_running'] = 'required|string';
-                $rules['settings.template_running_to_pending_payment'] = 'required|string';
-                $rules['settings.template_pending_payment_to_completed'] = 'required|string';
-                $rules['settings.template_pending_to_canceled'] = 'required|string';
-                $rules['settings.template_running_to_canceled'] = 'required|string';
-                $rules['settings.template_pending_payment_to_canceled'] = 'required|string';
-                $rules['settings.template_canceled_to_pending'] = 'required|string';
-                $rules['settings.template_canceled_to_running'] = 'required|string';
-            }
-
-            if ($this->settings['type'] === 'official') {
-                $rules['settings.webhook_verify_token'] = 'required|string';
-            } else {
-                $rules['settings.webhook_verify_token'] = 'nullable|string';
-            }
+            // Make others optional so we don't trigger validation errors for hidden fields
+            $rules['settings.version'] = 'nullable|string';
+            $rules['settings.webhook_verify_token'] = 'nullable|string';
+            $rules['settings.payment_template_name'] = 'nullable|string';
+            $rules['settings.use_default_only'] = 'nullable|boolean';
+            $rules['settings.language'] = 'nullable|string';
+            $rules['settings.template_pending_to_running'] = 'nullable|string';
+            $rules['settings.template_running_to_pending_payment'] = 'nullable|string';
+            $rules['settings.template_pending_payment_to_completed'] = 'nullable|string';
+            $rules['settings.template_pending_to_canceled'] = 'nullable|string';
+            $rules['settings.template_running_to_canceled'] = 'nullable|string';
+            $rules['settings.template_pending_payment_to_canceled'] = 'nullable|string';
+            $rules['settings.template_canceled_to_pending'] = 'nullable|string';
+            $rules['settings.template_canceled_to_running'] = 'nullable|string';
         } else {
             $rules['settings.custom_gateway_url'] = 'required|url';
             $rules['settings.access_token'] = 'nullable|string';
             $rules['settings.phone_number_id'] = 'nullable|string';
+            $rules['settings.template_name'] = 'nullable|string';
+            $rules['settings.template_id'] = 'nullable|string';
+            $rules['settings.sender_number'] = 'nullable|string';
+            $rules['settings.proposal_template_name'] = 'nullable|string';
             $rules['settings.version'] = 'nullable|string';
             $rules['settings.webhook_verify_token'] = 'nullable|string';
-            $rules['settings.template_name'] = 'nullable|string';
             $rules['settings.payment_template_name'] = 'nullable|string';
-            $rules['settings.proposal_template_name'] = 'nullable|string';
             $rules['settings.use_default_only'] = 'nullable|boolean';
             $rules['settings.template_pending_to_running'] = 'nullable|string';
             $rules['settings.template_running_to_pending_payment'] = 'nullable|string';
@@ -130,9 +130,11 @@ class WhatsappSettingsManager extends Component
             'phone_number_id' => config('services.whatsapp.phone_number_id', ''),
             'version' => config('services.whatsapp.version', 'v18.0'),
             'webhook_verify_token' => config('services.whatsapp.webhook_verify_token', ''),
-            'template_name' => config('services.whatsapp.template_name', 'project_status_update'),
+            'template_name' => config('services.whatsapp.template_name', 'praposal'),
+            'template_id' => config('services.whatsapp.template_id', '1014519774407056'),
+            'sender_number' => config('services.whatsapp.sender_number', '+919453619260'),
             'payment_template_name' => config('services.whatsapp.payment_template_name', 'project_payment_status'),
-            'proposal_template_name' => config('services.whatsapp.proposal_template_name', 'praposal'),
+            'proposal_template_name' => config('services.whatsapp.proposal_template_name', '23233'),
             'use_default_only' => filter_var(config('services.whatsapp.use_default_only', true), FILTER_VALIDATE_BOOLEAN),
             'template_pending_to_running' => config('services.whatsapp.template_pending_to_running', 'project_status_pending_to_running'),
             'template_running_to_pending_payment' => config('services.whatsapp.template_running_to_pending_payment', 'project_status_running_to_pending_payment'),
@@ -160,6 +162,12 @@ class WhatsappSettingsManager extends Component
         if (empty($this->settings['phone_number_id'])) {
              $this->settings['phone_number_id'] = env('WHATSAPP_PHONE_NUMBER_ID', '');
         }
+        if (empty($this->settings['template_id'])) {
+             $this->settings['template_id'] = env('WHATSAPP_TEMPLATE_ID', '1014519774407056');
+        }
+        if (empty($this->settings['sender_number'])) {
+             $this->settings['sender_number'] = env('WHATSAPP_SENDER_NUMBER', '+919453619260');
+        }
 
         // Load dynamic templates
         $this->customTemplates = json_decode(\App\Models\Setting::get('whatsapp_templates', '[]'), true);
@@ -183,6 +191,8 @@ class WhatsappSettingsManager extends Component
                 'WHATSAPP_API_VERSION' => $this->settings['version'],
                 'WHATSAPP_WEBHOOK_VERIFY_TOKEN' => $this->settings['webhook_verify_token'],
                 'WHATSAPP_TEMPLATE_NAME' => $this->settings['template_name'],
+                'WHATSAPP_TEMPLATE_ID' => $this->settings['template_id'],
+                'WHATSAPP_SENDER_NUMBER' => $this->settings['sender_number'],
                 'WHATSAPP_PAYMENT_TEMPLATE_NAME' => $this->settings['payment_template_name'],
                 'WHATSAPP_PROPOSAL_TEMPLATE_NAME' => $this->settings['proposal_template_name'],
                 'WHATSAPP_USE_DEFAULT_ONLY' => $this->settings['use_default_only'] ? 'true' : 'false',

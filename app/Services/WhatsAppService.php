@@ -394,7 +394,7 @@ class WhatsAppService
                 return false;
             }
 
-            $templateName = config('services.whatsapp.proposal_template_name', '23169');
+            $templateName = config('services.whatsapp.proposal_template_name', '23233');
             $imageUrl = url('assets/images/dev-plan.png');
 
             if ($this->type === 'fast2sms' && is_numeric($templateName)) {
